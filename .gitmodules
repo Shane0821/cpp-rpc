@@ -1,6 +1,0 @@
-[submodule "3rd/fmt"]
-	path = 3rd/fmt
-	url = https://github.com/fmtlib/fmt.git
-[submodule "3rd/llbc"]
-	path = 3rd/llbc
-	url = https://github.com/lailongwei/llbc.git
