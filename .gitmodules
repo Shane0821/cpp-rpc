@@ -1,0 +1,6 @@
+[submodule "3rd/llbc"]
+	path = 3rd/llbc
+	url = https://github.com/lailongwei/llbc
+[submodule "3rd/protobuf"]
+	path = 3rd/protobuf
+	url = https://github.com/protocolbuffers/protobuf
