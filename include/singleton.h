@@ -1,3 +1,6 @@
+#ifndef _SINGLETON_H
+#define _SINGLETON_H
+
 // T must be: no-throw default constructible and no-throw destructible
 template <typename T>
 struct Singleton {
@@ -37,3 +40,5 @@ public:
 
 template <typename T>
 typename Singleton<T>::object_creator Singleton<T>::create_object;
+
+#endif // _SINGLETON_H
