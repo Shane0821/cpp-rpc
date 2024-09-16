@@ -25,9 +25,9 @@ class ConnComp : public llbc::LLBC_Component {
     // callback when recv packet
     void OnRecvPacket(llbc::LLBC_Packet &packet);
 
-    static constexpr int MAX_BUFFER_SIZE = 1024;
+    static constexpr int MAX_QUEUE_SIZE = 1024;
 
    private:
-    SPSCQueue<llbc::LLBC_Packet, MAX_BUFFER_SIZE> sendQueue_;
-    SPSCQueue<llbc::LLBC_Packet, MAX_BUFFER_SIZE> recvQueue_;
+    SPSCQueue<llbc::LLBC_Packet, MAX_QUEUE_SIZE> sendQueue_;
+    SPSCQueue<llbc::LLBC_Packet, MAX_QUEUE_SIZE> recvQueue_;
 };
