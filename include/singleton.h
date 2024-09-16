@@ -3,24 +3,8 @@
 
 // T must be: no-throw default constructible and no-throw destructible
 template <typename T>
-struct Singleton {
-private:
-    struct object_creator {
-        // This constructor does nothing more than ensure that instance()
-        //  is called before main() begins, thus creating the static
-        //  T object before multithreading race issues can come up.
-        object_creator() { Singleton<T>::GetInst(); }
-        inline void do_nothing() const { }
-    };
-    static object_creator create_object;
-
-protected:
-    ~Singleton() { }
-    Singleton() = default;
-    Singleton(const Singleton &) = delete;
-    Singleton &operator=(const Singleton &) = delete;
-
-public:
+class Singleton {
+   public:
     // If, at any point (in user code), Singleton<T>::instance()
     //  is called, then the following function is instantiated.
     static T &GetInst() {
@@ -36,9 +20,25 @@ public:
 
         return obj;
     }
+
+   protected:
+    ~Singleton() {}
+    Singleton() = default;
+    Singleton(const Singleton &) = delete;
+    Singleton &operator=(const Singleton &) = delete;
+
+   private:
+    struct object_creator {
+        // This constructor does nothing more than ensure that instance()
+        //  is called before main() begins, thus creating the static
+        //  T object before multithreading race issues can come up.
+        object_creator() { Singleton<T>::GetInst(); }
+        inline void do_nothing() const {}
+    };
+    static object_creator create_object;
 };
 
 template <typename T>
 typename Singleton<T>::object_creator Singleton<T>::create_object;
 
-#endif // _SINGLETON_H
+#endif  // _SINGLETON_H
