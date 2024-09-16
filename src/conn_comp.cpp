@@ -56,3 +56,8 @@ int ConnComp::PushPacket(llbc::LLBC_Packet &sendPacket) {
 
     return LLBC_FAILED;
 }
+
+int ConnComp::PopPacket(llbc::LLBC_Packet &recvPacket) {
+    if (recvQueue_.pop(recvPacket)) return LLBC_OK;
+    return LLBC_FAILED;
+}

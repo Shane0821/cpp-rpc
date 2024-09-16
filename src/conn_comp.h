@@ -21,7 +21,7 @@ class ConnComp : public llbc::LLBC_Component {
     // send packet
     int PushPacket(llbc::LLBC_Packet &sendPacket);
     // recv packet
-    llbc::LLBC_Packet *PopPacket();
+    int PopPacket(llbc::LLBC_Packet &recvPacket);
     // callback when recv packet
     void OnRecvPacket(llbc::LLBC_Packet &packet);
 
