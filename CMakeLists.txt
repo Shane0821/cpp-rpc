@@ -16,6 +16,8 @@ endif()
 option(BUILD_DEMO "Build the demo" OFF)
 option(BUILD_TEST "Build the test" OFF)
 
+find_package(absl REQUIRED)
+
 # ============================
 # Directories
 # ============================
@@ -25,20 +27,31 @@ set(SRC_DIR "${ROOT_DIR}/src")
 set(INCLUDE_DIR "${ROOT_DIR}/include")
 set(DEMO_DIR "${ROOT_DIR}/demo")
 set(TEST_DIR "${ROOT_DIR}/test")
+set(THIRD_PARTY_DIR "${ROOT_DIR}/3rd")
 
 # ============================
 # Includes
 # ============================
 
-include_directories(${ROOT_DIR}/include)
+include_directories(
+    ${INCLUDE_DIR}
+    ${THIRD_PARTY_DIR}/protobuf/src
+    ${THIRD_PARTY_DIR}/llbc/llbc/include
+)
+
+# ============================
+# Libraries
+# ============================
+
+link_directories(
+    ${THIRD_PARTY_DIR}/llbc/output/gmake/release64
+)
 
 # ============================
 # Build
 # ============================
 
 add_subdirectory(src)
-
-
 
 # Conditionally build demo
 if (BUILD_DEMO)
