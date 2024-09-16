@@ -10,25 +10,30 @@ class RpcChannel;
 
 class ConnMgr : public Singleton<ConnMgr> {
    public:
-    ConnMgr();
+    ConnMgr() {};
     virtual ~ConnMgr();
 
     int Init();
     int StartRpcService(const char *ip, int port);
+    // create rpc client channel
     RpcChannel *CreateRpcChannel(const char *ip, int port);
+
     int CloseSession(int sessionId);
-    int PushPacket(llbc::LLBC_Packet &sendPacket) {
-        return comp_->PushPacket(sendPacket);
-    }
-    llbc::LLBC_Packet *PopPacket() { return comp_->PopPacket(); }
     int GetServerSessionId() { return serverSessionId_; }
-    bool IsServer() { return isServer_; }
-    // Handle rpc data packets. The main loop should call this function.
-    bool Tick();
+
     // subscribe cmdId's data packet
     int Subscribe(int cmdId, const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg);
     // unsubscribe  cmdId's data packet
     void Unsubscribe(int cmdId);
+
+    int PushPacket(llbc::LLBC_Packet &sendPacket) {
+        return comp_->PushPacket(sendPacket);
+    }
+    int PopPacket(llbc::LLBC_Packet &recvPacket) { return comp_->PopPacket(recvPacket); }
+
+    bool IsServer() { return isServer_; }
+    // Handle rpc data packets. The main loop should call this function.
+    bool Tick();
 
    private:
     llbc::LLBC_Service *svc_ = nullptr;
