@@ -3,6 +3,13 @@
 
 #include <llbc.h>
 
+#define COND_RET(condition, ...) \
+    {                            \
+        if (condition) {         \
+            return __VA_ARGS__;  \
+        }                        \
+    }
+
 #define COND_RET_TLOG(condition, retCode, ...) \
     {                                          \
         if (condition) {                       \
@@ -75,4 +82,4 @@
         }                                         \
     }
 
-#endif // _RPC_MACROS_H
+#endif  // _RPC_MACROS_H
