@@ -1,7 +1,7 @@
 #include <llbc.h>
 #include <spsc_queue.h>
 
-// 连接管理组件
+// Connection management component
 class ConnComp : public llbc::LLBC_Component {
    public:
     ConnComp();
