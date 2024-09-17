@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package echo;
+
+option cc_generic_services = true;
+
+enum ErrorCode {
+    SUCCESS = 0;
+    
+    UNKNOWN = 9999;
+    RPC_TIMEOUT = 10000;            // rpc call timeout
+    PARSE_PKG_FAILED = 10001;       // fail to parse packet
+    RECVED_TIMEOUT_PKG = 10002;     // receive a timeout package
+}
+
+service EchoService {
+    rpc Echo(EchoRequest) returns (EchoResponse);
+    rpc RelayEcho(EchoRequest) returns (EchoResponse);
+}
+
+message EchoRequest {
+    optional string msg = 1;
+}
+
+message EchoResponse {
+    optional string msg = 2;
+}
+
+message GetDataReq {
+    optional string msg = 1;
+}
+message GetDataRsp {
+    optional string msg = 1;
+}
+
