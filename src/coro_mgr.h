@@ -10,14 +10,18 @@
 #include "macros.h"
 
 class RpcCoroMgr : public Singleton<RpcCoroMgr> {
+    friend class Singleton<RpcCoroMgr>;
+
    public:
     using coro_uid_type = std::uint64_t;
 
     struct context {
         int session_id = 0;
-        std::coroutine_handle<> handle = {};
+        std::coroutine_handle<> handle = nullptr;
         ::google::protobuf::Message *rsp = nullptr;
     };
+
+    virtual ~RpcCoroMgr() = default;
 
     int Init() { return 0; }
 
@@ -41,12 +45,11 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
             return ctx;
         }
         LLOG_ERROR("coro_uid not found|coro_uid:%lu", coro_uid);
-        return context{.handle = {}, .rsp = nullptr};
+        return context{.handle = nullptr, .rsp = nullptr};
     }
 
    protected:
     RpcCoroMgr() {}
-    virtual ~RpcCoroMgr() {}
 
    private:
     std::unordered_map<coro_uid_type, context> suspended_contexts_;
