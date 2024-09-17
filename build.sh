@@ -21,7 +21,6 @@ build_protobuf() {
 
 # build llbc lib function
 build_llbc() {
-    # sudo yum install libuuid libuuid-devel
     echo "Building llbc"
     git submodule update --init --recursive
     cd $LLBC_PATH
