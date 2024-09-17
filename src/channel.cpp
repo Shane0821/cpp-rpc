@@ -3,6 +3,8 @@
 #include "conn_mgr.h"
 #include "macros.h"
 
+RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
+
 int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) {
     int ret = packet.Read(dst);
     COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.dst failed|ret:%d", ret);
@@ -39,8 +41,6 @@ const std::string &RpcChannel::PkgHead::ToString() const {
                src, dst, uid, seq, cmd);
     return buffer;
 }
-
-RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
 
 void RpcChannel::CallMethod(const ::google::protobuf::MethodDescriptor *method,
                             ::google::protobuf::RpcController *controller,
