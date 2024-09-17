@@ -3,7 +3,7 @@
 #include "channel.h"
 #include "macros.h"
 
-ConnMgr::~ConnMgr() {
+ConnMgr::~ConnMgr() noexcept {
     if (svc_) {
         svc_->Stop();
         delete svc_;
