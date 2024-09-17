@@ -17,10 +17,6 @@ class EchoClientImpl {
                                   const ::echo::EchoRequest *request,
                                   ::echo::EchoResponse *response,
                                   ::google::protobuf::Closure *done);
-    std::suspend_always GetData(::google::protobuf::RpcController *controller,
-                                const ::echo::GetDataReq *request,
-                                ::echo::GetDataRsp *response,
-                                ::google::protobuf::Closure *done);
 
    private:
     ::echo::EchoService_Stub stub;
