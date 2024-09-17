@@ -2,7 +2,7 @@
 
 #include <coroutine>
 
-#include "demo.pb.h"
+#include "echo.pb.h"
 
 class EchoClientImpl {
    public:
