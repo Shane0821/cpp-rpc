@@ -7,7 +7,7 @@ class Singleton {
    public:
     // If, at any point (in user code), Singleton<T>::instance()
     //  is called, then the following function is instantiated.
-    static T &GetInst() {
+    static T &GetInst() noexcept {
         // This is the object that we return a reference to.
         // It is guaranteed to be created before main() begins because of
         //  the next line.
@@ -22,8 +22,8 @@ class Singleton {
     }
 
    protected:
-    ~Singleton() {}
-    Singleton() = default;
+    ~Singleton() noexcept {}
+    Singleton() noexcept = default;
     Singleton(const Singleton &) = delete;
     Singleton &operator=(const Singleton &) = delete;
 
@@ -32,8 +32,8 @@ class Singleton {
         // This constructor does nothing more than ensure that instance()
         //  is called before main() begins, thus creating the static
         //  T object before multithreading race issues can come up.
-        object_creator() { Singleton<T>::GetInst(); }
-        inline void do_nothing() const {}
+        object_creator() noexcept { Singleton<T>::GetInst(); }
+        inline void do_nothing() const noexcept {}
     };
     static object_creator create_object;
 };
