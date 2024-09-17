@@ -3,6 +3,13 @@
 
 #include <llbc.h>
 
+#define COND_EXP(condition, expr, ...) \
+    {                                  \
+        if (condition) {               \
+            expr;                      \
+        }                              \
+    }
+
 #define COND_RET(condition, ...) \
     {                            \
         if (condition) {         \
