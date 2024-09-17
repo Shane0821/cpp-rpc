@@ -1,2 +1,2 @@
 add_executable(server ${PB_SRC} echo_service_impl.cpp service.cpp)
-target_link_libraries(server libprotobuf.a)
+target_link_libraries(server rpc)
