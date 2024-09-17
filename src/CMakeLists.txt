@@ -1,7 +1,7 @@
 # Define the library
-add_library(librpc)
+add_library(rpc)
 
 aux_source_directory(${SRC_DIR} SRC)
 
 # Add source files
-target_sources(librpc PRIVATE ${SRC})
+target_sources(rpc PRIVATE ${SRC})

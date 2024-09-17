@@ -16,8 +16,6 @@ endif()
 option(BUILD_DEMO "Build the demo" OFF)
 option(BUILD_TEST "Build the test" OFF)
 
-find_package(absl REQUIRED)
-
 # ============================
 # Directories
 # ============================
@@ -28,6 +26,7 @@ set(INCLUDE_DIR "${ROOT_DIR}/include")
 set(DEMO_DIR "${ROOT_DIR}/demo")
 set(TEST_DIR "${ROOT_DIR}/test")
 set(THIRD_PARTY_DIR "${ROOT_DIR}/3rd")
+set(PB_DIR "${ROOT_DIR}/proto/stub")
 
 # ============================
 # Includes
@@ -44,6 +43,7 @@ include_directories(
 # ============================
 
 link_directories(
+    ${THIRD_PARTY_DIR}/protobuf/src/.libs
     ${THIRD_PARTY_DIR}/llbc/output/gmake/release64
 )
 
@@ -57,7 +57,7 @@ add_subdirectory(src)
 if (BUILD_DEMO)
     add_subdirectory(demo)
     add_custom_target(demo ALL
-        DEPENDS librpc
+        DEPENDS rpc
     )
 endif()
 
@@ -65,6 +65,6 @@ endif()
 if (BUILD_TEST)
     add_subdirectory(test)
     add_custom_target(test ALL
-        DEPENDS librpc
+        DEPENDS rpc
     )
 endif()
