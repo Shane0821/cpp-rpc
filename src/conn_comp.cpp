@@ -33,7 +33,7 @@ void ConnComp::OnProtoReport(const llbc::LLBC_ProtoReport &report) {
 }
 
 void ConnComp::OnUpdate() {
-    llbc::LLBC_Packet sendPacket;
+    static llbc::LLBC_Packet sendPacket;
     while (sendQueue_.pop(sendPacket)) {
         LLOG_TRACE("sendPacket: %s", sendPacket.ToString().c_str());
         auto ret = GetService()->Send(&sendPacket);
@@ -43,21 +43,20 @@ void ConnComp::OnUpdate() {
     }
 }
 
-void ConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) {
+void ConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) noexcept {
     LLOG_TRACE("OnRecvPacket: %s", packet.ToString().c_str());
-    llbc::LLBC_Packet recvPacket;
+    static llbc::LLBC_Packet recvPacket;
     recvPacket.SetHeader(packet.GetSessionId(), packet.GetOpcode(), 0);
     recvPacket.SetPayload(packet.DetachPayload());
     recvQueue_.emplace(recvPacket);
 }
 
-int ConnComp::PushPacket(llbc::LLBC_Packet &sendPacket) {
+int ConnComp::PushPacket(llbc::LLBC_Packet &sendPacket) noexcept {
     if (sendQueue_.emplace(sendPacket)) return LLBC_OK;
-
     return LLBC_FAILED;
 }
 
-int ConnComp::PopPacket(llbc::LLBC_Packet &recvPacket) {
+int ConnComp::PopPacket(llbc::LLBC_Packet &recvPacket) noexcept {
     if (recvQueue_.pop(recvPacket)) return LLBC_OK;
     return LLBC_FAILED;
 }
