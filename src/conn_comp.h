@@ -19,11 +19,11 @@ class ConnComp : public llbc::LLBC_Component {
     virtual void OnProtoReport(const llbc::LLBC_ProtoReport &report);
 
     // send packet
-    int PushPacket(llbc::LLBC_Packet &sendPacket);
+    int PushPacket(llbc::LLBC_Packet &sendPacket) noexcept;
     // recv packet
-    int PopPacket(llbc::LLBC_Packet &recvPacket);
+    int PopPacket(llbc::LLBC_Packet &recvPacket) noexcept;
     // callback when recv packet
-    void OnRecvPacket(llbc::LLBC_Packet &packet);
+    void OnRecvPacket(llbc::LLBC_Packet &packet) noexcept;
 
     static constexpr int MAX_QUEUE_SIZE = 1024;
 
