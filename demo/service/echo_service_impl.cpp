@@ -29,19 +29,18 @@ RpcCoro InnerCallMeathod(::google::protobuf::RpcController *controller,
     echo::EchoResponse innerRsp;
     // create rpc channel
     RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
-    // if (!channel) {
-    //     LLOG_INFO("GetRpcChannel Fail");
-    //     rsp->set_msg(req->msg() + " ---- inner rpc call server not exist");
-    //     controller->SetFailed("GetRpcChannel Fail");
-    //     done->Run();
-    //     co_return;
-    // }
+    if (!channel) {
+        LLOG_INFO("GetRpcChannel Fail");
+        rsp->set_msg(req->msg() + " ---- inner rpc call server not exist");
+        controller->SetFailed("GetRpcChannel Fail");
+        done->Run();
+        co_return;
+    }
 
-    // LLOG_INFO("call, msg:%s", innerReq.msg().c_str());
-
-    // // RpcController cntl(co_await GetHandleAwaiter{});
+    LLOG_INFO("call, msg:%s", innerReq.msg().c_str());
 
     EchoClientImpl stub(channel);
+    // // RpcController cntl(co_await GetHandleAwaiter{});
     // // co_await stub.Echo(&cntl, &innerReq, &innerRsp, nullptr);
     // // LLOG_INFO("Recv rsp, status:%s, rsp:%s\n",
     // //           cntl.Failed() ? cntl.ErrorText().c_str() : "success",
