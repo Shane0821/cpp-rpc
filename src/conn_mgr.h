@@ -12,7 +12,7 @@ class ConnMgr : public Singleton<ConnMgr> {
     friend class Singleton<ConnMgr>;
 
    public:
-    virtual ~ConnMgr();
+    virtual ~ConnMgr() noexcept;
 
     int Init() noexcept;
     // start rpc service and listen on ip:port
