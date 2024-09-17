@@ -9,17 +9,19 @@
 class RpcChannel;
 
 class ConnMgr : public Singleton<ConnMgr> {
+    friend class Singleton<ConnMgr>;
+
    public:
-    ConnMgr() {};
     virtual ~ConnMgr();
 
-    int Init();
+    int Init() noexcept;
+    // start rpc service and listen on ip:port
     int StartRpcService(const char *ip, int port);
     // create rpc client channel
     RpcChannel *CreateRpcChannel(const char *ip, int port);
 
     int CloseSession(int sessionId);
-    int GetServerSessionId() { return serverSessionId_; }
+    int GetServerSessionId() { return server_sessionId_; }
 
     // subscribe cmdId's data packet
     int Subscribe(int cmdId, const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg);
@@ -31,17 +33,20 @@ class ConnMgr : public Singleton<ConnMgr> {
     }
     int PopPacket(llbc::LLBC_Packet &recvPacket) { return comp_->PopPacket(recvPacket); }
 
-    bool IsServer() { return isServer_; }
+    bool IsServer() { return is_server_; }
     // Handle rpc data packets. The main loop should call this function.
-    bool Tick();
+    void Tick() noexcept;
+
+   protected:
+    ConnMgr() = default;
 
    private:
     llbc::LLBC_Service *svc_ = nullptr;
     ConnComp *comp_ = nullptr;
-    bool isServer_ = false;
-    int serverSessionId_ = 0;
+    bool is_server_ = false;
+    int server_sessionId_ = 0;
     std::unordered_map<int, llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>>
-        packetDelegs_;  // {cmdId : delegate}
+        packet_delegs_;  // {cmdId : delegate}
 };
 
 #endif  // _RPC_CONN_MGR_H_
