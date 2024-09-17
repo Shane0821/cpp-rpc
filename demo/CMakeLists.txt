@@ -11,6 +11,6 @@ aux_source_directory(
     ${PB_DIR} PB_SRC
 )
 
-add_subdirectory(service)
 add_subdirectory(client)
+add_subdirectory(service)
 
