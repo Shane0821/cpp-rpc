@@ -7,6 +7,7 @@
 #include <coroutine>
 #include <unordered_map>
 
+#include "rpc_coro.h"
 #include "rpc_macros.h"
 
 class RpcCoroMgr : public Singleton<RpcCoroMgr> {
@@ -17,7 +18,8 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
 
     struct context {
         int session_id = 0;
-        std::coroutine_handle<> handle = nullptr;
+        llbc::sint64 timeoutTime_;
+        std::coroutine_handle<RpcCoro::promise_type> handle = nullptr;
         ::google::protobuf::Message *rsp = nullptr;
     };
 
@@ -33,11 +35,11 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
         return ++coro_uid_generator_ == 0UL ? ++coro_uid_generator_ : coro_uid_generator_;
     }
 
-    bool Suspend(coro_uid_type coro_uid, context ctx) noexcept {
+    bool AddCoroContext(coro_uid_type coro_uid, context ctx) noexcept {
         return suspended_contexts_.insert({coro_uid, ctx}).second;
     }
 
-    context Resume(coro_uid_type coro_uid) {
+    context PopCoroContext(coro_uid_type coro_uid) {
         if (auto iter = suspended_contexts_.find(coro_uid);
             iter != suspended_contexts_.end()) {
             auto ctx = iter->second;
@@ -47,6 +49,8 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
         LLOG_ERROR("coro_uid not found|coro_uid:%lu", coro_uid);
         return context{.handle = nullptr, .rsp = nullptr};
     }
+
+    static constexpr int CORO_TIME_OUT = 10000;  // 10s
 
    protected:
     RpcCoroMgr() {}
@@ -58,21 +62,30 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
     bool use_coro_ = false;
 };
 
-struct SaveContextAwaiter {
+// Used with the co_await keyword in coroutines.
+struct RpcSaveContextAwaiter {
    public:
-    SaveContextAwaiter(RpcCoroMgr::coro_uid_type coro_uid, RpcCoroMgr::context context)
+    RpcSaveContextAwaiter(RpcCoroMgr::coro_uid_type coro_uid, RpcCoroMgr::context context)
         : coro_uid_(coro_uid), context_(context) {}
 
-    bool await_ready() const noexcept { return false; }
+    bool await_ready() const noexcept {
+        // Always returns false, meaning the coroutine will always suspend when this
+        // awaiter is used.
+        return false;
+    }
 
-    decltype(auto) await_suspend(std::coroutine_handle<> handle) {
+    // Called when the coroutine is suspended
+    decltype(auto) await_suspend(std::coroutine_handle<RpcCoro::promise_type> handle) {
         LLOG_INFO("suspend coro|coro_uid:%lu|%p|rsp:%p", coro_uid_, handle.address(),
                   context_.rsp);
         context_.handle = handle;
-        RpcCoroMgr::GetInst().Suspend(coro_uid_, context_);
+        RpcCoroMgr::GetInst().AddCoroContext(coro_uid_, context_);
+        // false: Immediate resumption after suspension.
+        // true: Suspension until explicitly resumed by external logic.
         return true;
     }
 
+    // Called when the coroutine is resumed.
     void await_resume() {}
 
    private:
