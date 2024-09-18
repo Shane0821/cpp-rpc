@@ -1,77 +1,58 @@
 #ifndef _RPC_CORO_H_
 #define _RPC_CORO_H_
 
+#include <llbc.h>
+
 #include <coroutine>
 #include <stdexcept>
 
 class RpcCoro {
    public:
-    struct promise_type;
+    struct promise_type {
+        auto get_return_object() { return RpcCoro{handle_type::from_promise(*this)}; }
+
+        auto initial_suspend() { return std::suspend_never{}; }
+        //
+        auto final_suspend() noexcept {
+            // std::suspend_always: The coroutine suspends at the end, requiring explicit
+            // resumption by the caller.
+            // std::suspend_never: The coroutine does not suspend at the end, allowing for
+            // immediate cleanup and continuation without needing to resume.
+            return std::suspend_never{};
+        }
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
+        auto yield_value() { return std::suspend_always{}; }
+    };
+
     using handle_type = std::coroutine_handle<promise_type>;
 
-    struct promise_type {
-        int unique_id;
-
-        // Called to get the return object of the coroutine
-        auto get_return_object() noexcept {
-            return RpcCoro{handle_type::from_promise(*this)};
+    explicit RpcCoro(handle_type h) : coro_handle_(h) {}
+    RpcCoro(RpcCoro const&) = delete;
+    RpcCoro(RpcCoro&& rhs) : coro_handle_(rhs.coro_handle_) {
+        rhs.coro_handle_ = nullptr;
+    }
+    RpcCoro& operator=(RpcCoro&& other) noexcept {
+        if (this != &other) {
+            if (coro_handle_) coro_handle_.destroy();
+            coro_handle_ = other.coro_handle_;
+            other.coro_handle_ = nullptr;
         }
-
-        // Define when the coroutine initially suspends
-        auto initial_suspend() noexcept { return std::suspend_never{}; }
-
-        // Define behavior at the end of the coroutine
-        auto final_suspend() noexcept { return std::suspend_always{}; }
-
-        // Handle exceptions
-        void unhandled_exception() { std::terminate(); }
-
-        // Return void from the coroutine
-        void return_void() noexcept {}
-
-        // Yield value
-        auto yield_value() noexcept { return std::suspend_always{}; }
-    };
-
-    struct GetHandleAwaiter {
-        bool await_ready() const noexcept { return false; }
-
-        bool await_suspend(std::coroutine_handle<promise_type> handle) {
-            handle_ = handle.address();
-            return false;
-        }
-
-        void *await_resume() noexcept { return handle_; }
-
-        void *handle_;
-    };
-
-    RpcCoro(RpcCoro const &) = delete;
-    RpcCoro(RpcCoro &&rhs) noexcept : coro_handle(rhs.coro_handle) {
-        rhs.coro_handle = nullptr;
+        return *this;
     }
     ~RpcCoro() {
-        if (coro_handle) coro_handle.destroy();
+        if (coro_handle_) coro_handle_.destroy();
     }
 
-    int get_id() const noexcept { return coro_handle.promise().unique_id; }
-    void resume() noexcept { coro_handle.resume(); }
-    void cancel() noexcept {
-        if (coro_handle) {
-            coro_handle.destroy();
-            coro_handle = nullptr;
-        }
+    void resume() { coro_handle_.resume(); }
+    auto yield() { return coro_handle_.promise().yield_value(); }
+    void cancel() {
+        coro_handle_.destroy();
+        coro_handle_ = nullptr;
     }
 
    private:
-    /**
-     * This is set to private, to make sure that:
-     * 1. only the coroutine infrastructure (via get_return_object) can create instances
-     * 2. the promise type is tightly coupled with the coroutine's return object
-     */
-    RpcCoro(handle_type h) noexcept : coro_handle(h) {}
-
-    handle_type coro_handle;
+    handle_type coro_handle_;
 };
 
 #endif  // _RPC_CORO_H_
