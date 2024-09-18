@@ -7,7 +7,7 @@
 #include <coroutine>
 #include <unordered_map>
 
-#include "macros.h"
+#include "rpc_macros.h"
 
 class RpcCoroMgr : public Singleton<RpcCoroMgr> {
     friend class Singleton<RpcCoroMgr>;

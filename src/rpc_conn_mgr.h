@@ -4,7 +4,7 @@
 #include <llbc.h>
 #include <singleton.h>
 
-#include "conn_comp.h"
+#include "rpc_conn_comp.h"
 
 class RpcChannel;
 

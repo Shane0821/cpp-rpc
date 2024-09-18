@@ -33,7 +33,7 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
         std::uint32_t src = 0U;
         std::uint32_t dst = 0U;
         std::uint64_t uid = 0UL;
-        std::uint64_t seq = 0UL;
+        std::uint64_t seq = 0UL;  // coro_uid
         std::uint32_t cmd = 0U;
         std::int8_t flag = 0;
         std::int8_t type = 0;
@@ -48,10 +48,10 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     virtual ~RpcChannel();
 
     virtual void CallMethod(const ::google::protobuf::MethodDescriptor *method,
-                    ::google::protobuf::RpcController *controller,
-                    const ::google::protobuf::Message *request,
-                    ::google::protobuf::Message *response,
-                    ::google::protobuf::Closure *done) override;
+                            ::google::protobuf::RpcController *controller,
+                            const ::google::protobuf::Message *request,
+                            ::google::protobuf::Message *response,
+                            ::google::protobuf::Closure *done) override;
     int Send(const PkgHead &pkg_head, const ::google::protobuf::Message &message);
 
     static constexpr std::size_t MAX_BUFFER_SIZE = 1024UL;

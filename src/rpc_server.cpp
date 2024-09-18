@@ -1,7 +1,7 @@
 #include <llbc.h>
 
-#include "conn_mgr.h"
-#include "server.h"
+#include "rpc_conn_mgr.h"
+#include "rpc_server.h"
 
 void RpcServer::Run() {
     Serve();

@@ -1,6 +1,6 @@
-#include "conn_comp.h"
+#include "rpc_conn_comp.h"
 
-#include "macros.h"
+#include "rpc_macros.h"
 
 ConnComp::ConnComp() : llbc::LLBC_Component() {}
 

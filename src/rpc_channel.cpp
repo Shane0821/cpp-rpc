@@ -1,7 +1,7 @@
-#include "channel.h"
+#include "rpc_channel.h"
 
-#include "conn_mgr.h"
-#include "macros.h"
+#include "rpc_conn_mgr.h"
+#include "rpc_macros.h"
 
 RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
 

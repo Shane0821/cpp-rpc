@@ -1,7 +1,7 @@
-#include "conn_mgr.h"
+#include "rpc_conn_mgr.h"
 
-#include "channel.h"
-#include "macros.h"
+#include "rpc_channel.h"
+#include "rpc_macros.h"
 
 ConnMgr::~ConnMgr() noexcept {
     if (svc_) {
