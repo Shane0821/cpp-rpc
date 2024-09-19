@@ -33,10 +33,11 @@ void RpcConnComp::OnProtoReport(const llbc::LLBC_ProtoReport &report) {
 }
 
 void RpcConnComp::OnUpdate() {
-    static llbc::LLBC_Packet sendPacket;
-    while (sendQueue_.pop(sendPacket)) {
-        LLOG_TRACE("sendPacket: %s", sendPacket.ToString().c_str());
-        auto ret = GetService()->Send(&sendPacket);
+    llbc::LLBC_Packet *sendPacket =
+        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+    while (sendQueue_.pop(*sendPacket)) {
+        LLOG_TRACE("sendPacket: %s", sendPacket->ToString().c_str());
+        auto ret = GetService()->Send(sendPacket);
         if (ret != LLBC_OK) {
             LLOG_ERROR("Send packet failed, err: %s", llbc::LLBC_FormatLastError());
         }
@@ -45,10 +46,11 @@ void RpcConnComp::OnUpdate() {
 
 void RpcConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) noexcept {
     LLOG_TRACE("OnRecvPacket: %s", packet.ToString().c_str());
-    static llbc::LLBC_Packet recvPacket;
-    recvPacket.SetHeader(packet.GetSessionId(), packet.GetOpcode(), 0);
-    recvPacket.SetPayload(packet.DetachPayload());
-    recvQueue_.emplace(recvPacket);
+    llbc::LLBC_Packet *recvPacket =
+        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+    recvPacket->SetHeader(packet.GetSessionId(), packet.GetOpcode(), 0);
+    recvPacket->SetPayload(packet.DetachPayload());
+    recvQueue_.emplace(*recvPacket);
 }
 
 int RpcConnComp::PushSendPacket(llbc::LLBC_Packet &sendPacket) noexcept {

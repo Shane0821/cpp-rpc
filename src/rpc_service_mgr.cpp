@@ -85,16 +85,17 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
 
 void RpcServiceMgr::OnRpcDone(RpcController *controller,
                               ::google::protobuf::Message *rsp) {
-    static llbc::LLBC_Packet packet;
+    llbc::LLBC_Packet *packet =
+        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
 
-    packet.SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
-    packet.SetSessionId(session_id_);
+    packet->SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
+    packet->SetSessionId(session_id_);
 
-    int ret = controller->GetPkgHead().ToPacket(packet);
+    int ret = controller->GetPkgHead().ToPacket(*packet);
     COND_RET_ELOG(ret != 0, , "pkg_head.ToPacket failed|ret:%d", ret);
 
-    ret = packet.Write(*rsp);
+    ret = packet->Write(*rsp);
     COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
 
-    conn_mgr_->SendPacket(packet);
+    conn_mgr_->SendPacket(*packet);
 }

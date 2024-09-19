@@ -60,14 +60,15 @@ int RpcConnMgr::CloseSession(int sessionId) {
 
 void RpcConnMgr::Tick() noexcept {
     svc_->OnSvc(true);
-    static llbc::LLBC_Packet packet;
-    while (RecvPacket(packet) == LLBC_OK) {
+    llbc::LLBC_Packet *packet =
+        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+    while (RecvPacket(*packet) == LLBC_OK) {
         LLOG_TRACE("Tick");
-        auto it = packet_delegs_.find(packet.GetOpcode());
+        auto it = packet_delegs_.find(packet->GetOpcode());
         if (it == packet_delegs_.end())
-            LLOG_ERROR("Recv Untapped opcode:%d", packet.GetOpcode());
+            LLOG_ERROR("Recv Untapped opcode:%d", packet->GetOpcode());
         else
-            (it->second)(packet);
+            (it->second)(*packet);
     }
 }
 
