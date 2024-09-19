@@ -7,7 +7,6 @@ RpcConnMgr::~RpcConnMgr() noexcept {
     delete comp_;
     if (svc_) {
         svc_->Stop();
-        svc_->RemoveSession(server_sessionId_);
     }
 }
 
