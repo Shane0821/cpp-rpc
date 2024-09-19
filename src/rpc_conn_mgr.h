@@ -17,15 +17,15 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     int Init() noexcept;
     // start rpc service and listen on ip:port
     int StartRpcService(const char *ip, int port);
-    // create rpc client channel
+    // create rpc client channel, this is used to connect to server
     RpcChannel *CreateRpcChannel(const char *ip, int port);
 
     int CloseSession(int sessionId);
     int GetServerSessionId() { return server_sessionId_; }
 
-    // Subscribe to services' req and rsp handlers
+    // Subscribe to services' req and rsp packet handlers
     int Subscribe(int cmdId, const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg);
-    // unsubscribe handlers
+    // Unsubscribe handlers
     void Unsubscribe(int cmdId);
 
     int SendPacket(llbc::LLBC_Packet &sendPacket) {
