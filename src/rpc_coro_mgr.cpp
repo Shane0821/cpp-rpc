@@ -1,5 +1,7 @@
 #include "rpc_coro_mgr.h"
 
+#include "rpc_macros.h"
+
 RpcCoroMgr::context RpcCoroMgr::PopCoroContext(RpcCoroMgr::coro_uid_type coro_uid) {
     if (auto iter = suspended_contexts_.find(coro_uid);
         iter != suspended_contexts_.end()) {
@@ -22,6 +24,7 @@ void RpcCoroMgr::HandleCoroTimeout() {
         if (ctx.handle) {
             ctx.handle.destroy();
         }
+        ctx.controller->SetFailed("rpc coro timeout");
         coroHeap_.pop();
     }
 }

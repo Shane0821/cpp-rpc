@@ -7,6 +7,7 @@
 #include <coroutine>
 #include <unordered_map>
 
+#include "rpc_controller.h"
 #include "rpc_coro.h"
 #include "rpc_macros.h"
 
@@ -21,6 +22,7 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
         llbc::sint64 timeoutTime_;
         std::coroutine_handle<RpcCoro::promise_type> handle = nullptr;
         ::google::protobuf::Message *rsp = nullptr;
+        RpcController *controller = nullptr;
     };
 
     struct contextCmp {
