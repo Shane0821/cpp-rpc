@@ -7,6 +7,7 @@ RpcConnMgr::~RpcConnMgr() noexcept {
     delete comp_;
     if (svc_) {
         svc_->Stop();
+        svc_->RemoveSession(server_sessionId_);
     }
 }
 
@@ -30,9 +31,13 @@ int RpcConnMgr::Init() noexcept {
 }
 
 int RpcConnMgr::StartRpcService(const char *ip, int port) {
+    if (is_server_) {
+        LLOG_ERROR("Service already started");
+        return LLBC_FAILED;
+    }
     LLOG_TRACE("RpcConnMgr StartRpcService");
     LLOG_TRACE("Server will listen on %s:%d", ip, port);
-    int server_sessionId_ = svc_->Listen(ip, port);
+    server_sessionId_ = svc_->Listen(ip, port);
     COND_RET_ELOG(server_sessionId_ == 0, LLBC_FAILED,
                   "Create session failed, reason: %s", llbc::LLBC_FormatLastError())
     is_server_ = true;
