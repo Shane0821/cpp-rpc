@@ -23,15 +23,17 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     int CloseSession(int sessionId);
     int GetServerSessionId() { return server_sessionId_; }
 
-    // subscribe cmdId's data packet
+    // Subscribe to services' req and rsp handlers
     int Subscribe(int cmdId, const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg);
-    // unsubscribe  cmdId's data packet
+    // unsubscribe handlers
     void Unsubscribe(int cmdId);
 
     int SendPacket(llbc::LLBC_Packet &sendPacket) {
         return comp_->PushSendPacket(sendPacket);
     }
-    int RecvPacket(llbc::LLBC_Packet &recvPacket) { return comp_->PopRecvPacket(recvPacket); }
+    int RecvPacket(llbc::LLBC_Packet &recvPacket) {
+        return comp_->PopRecvPacket(recvPacket);
+    }
 
     bool IsServer() { return is_server_; }
     // Handle rpc data packets. The main loop should call this function.
