@@ -9,23 +9,16 @@
 
 #include "rpc_channel.h"
 
+class RpcController;
 class ConnMgr;
 
 class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     friend class Singleton<RpcServiceMgr>;
 
    public:
-    // using CoMethodFunc =
-    //     std::function<mt::Task<int>>(const ::google::protobuf::MethodDescriptor
-    //     *method,
-    //                                  ::google::protobuf::RpcController *controller,
-    //                                  const ::google::protobuf::Message &request,
-    //                                  ::google::protobuf::Message &response,
-    //                                  ::google::protobuf::Closure *done) > ;
     struct ServiceInfo {
         ::google::protobuf::Service *service = nullptr;
-        const ::google::protobuf::MethodDescriptor *method = nullptr;
-        // CoMethodFunc co_func = nullptr;
+        const ::google::protobuf::MethodDescriptor *md = nullptr;
     };
 
     virtual ~RpcServiceMgr();
@@ -46,8 +39,8 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     void HandleRpcRsp(llbc::LLBC_Packet &packet);
 
     // 处理 RPC 结束回调
-    void OnRpcDone(const RpcChannel::PkgHead &pkg_head,
-                   const ::google::protobuf::Message &rsp);
+    void OnRpcDone(RpcController *controller,
+                   ::google::protobuf::Message *rsp);
 
    private:
     ConnMgr *conn_mgr_ = nullptr;

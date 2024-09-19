@@ -1,6 +1,9 @@
-#include "rpc_conn_mgr.h"
-#include "rpc_macros.h"
 #include "rpc_service_mgr.h"
+
+#include "rpc_conn_mgr.h"
+#include "rpc_controller.h"
+#include "rpc_coro_mgr.h"
+#include "rpc_macros.h"
 
 int RpcServiceMgr::Init(ConnMgr *conn_mgr) {
     COND_RET_ELOG(conn_mgr_ != nullptr, LLBC_FAILED,
@@ -53,75 +56,67 @@ void RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid,
 }
 
 void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
-    // PkgHead pkg_head;
-    // int ret = pkg_head.FromPacket(packet);
-    // CO_COND_RET_ELOG(ret != 0, ret, "pkg_head.FromPacket failed|ret:%d", ret);
-    // session_id_ = packet.GetSessionId();
+    RpcChannel::PkgHead pkg_head;
+    int ret = pkg_head.FromPacket(packet);
+    COND_RET_ELOG(ret != 0, , "pkg_head.FromPacket failed|ret:%d", ret);
+    session_id_ = packet.GetSessionId();
 
-    // auto iter = service_methods_.find(pkg_head.cmd);
-    // CO_COND_RET_ELOG(iter == service_methods_.end(), -1, "service and method not
-    // found|cmd:%08X", pkg_head.cmd); auto *service = iter->second.service; const auto
-    // *method = iter->second.method;
-    // // 解析 req & 创建 rsp
-    // auto *req = service->GetRequestPrototype(method).New();
-    // auto *rsp = service->GetResponsePrototype(method).New();
-    // LLOG_TRACE("packet: %s", packet.ToString().c_str());
-    // ret = packet.Read(*req);
-    // CO_COND_RET_ELOG(ret != LLBC_OK, ret, "read req failed|ret:%d|reason: %s", ret,
-    // LLBC_FormatLastError());
+    auto iter = service_methods_.find(pkg_head.cmd);
+    COND_RET_ELOG(iter == service_methods_.end(), ,
+                  "service and method not found|cmd:%08X", pkg_head.cmd);
+    auto *service = iter->second.service;
+    const auto *method = iter->second.md;
 
-    // // TODO modnarshen 这里的 done
-    // 传递的是引用，可能要确定下回调执行时，引用的实例是否还存在
-    // // auto done = ::google::protobuf::NewCallback<RpcServiceMgr, const PkgHead &,
-    // const ::google::protobuf::Message &>(
-    // //     &RpcServiceMgr::GetInst(), &RpcServiceMgr::OnRpcDone, pkg_head, *rsp);
+    // 解析 req & 创建 rsp
+    auto *req = service->GetRequestPrototype(method).New();
+    LLOG_TRACE("packet: %s", packet.ToString().c_str());
+    ret = packet.Read(*req);
+    COND_RET_ELOG(ret != LLBC_OK, , "read req failed|ret:%d|reason: %s", ret,
+                  llbc::LLBC_FormatLastError());
+    auto *rsp = service->GetResponsePrototype(method).New();
 
-    // assert(iter->second.co_func);
-    // ret = co_await iter->second.co_func(method, &RpcController::GetInst(), *req, *rsp,
-    // nullptr);
-    // // service->CallMethod(method, &RpcController::GetInst(), req, rsp, nullptr);
-    // CO_COND_RET_ELOG(ret != 0, ret, "call method failed|ret:%d", ret);
-    // OnRpcDone(pkg_head, *rsp);
-
-    // co_return 0;
+    auto controller = new RpcController();
+    // TODO: auto controller = objPool.Get<RpcController>();
+    controller->SetPkgHead(pkg_head);
+    // create call back on rpc done
+    auto done =
+        ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, controller, rsp);
+    service->CallMethod(method, controller, req, rsp, done);
 }
 
 void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
-    // PkgHead pkg_head;
-    // int ret = pkg_head.FromPacket(packet);
-    // CO_COND_RET_ELOG(ret != 0, ret, "pkg_head.FromPacket failed|ret:%d", ret);
-    // LLOG_DEBUG("pkg_head info|%s", pkg_head.ToString().c_str());
+    RpcChannel::PkgHead pkg_head;
+    int ret = pkg_head.FromPacket(packet);
+    COND_RET_ELOG(ret != LLBC_OK, , "pkg_head.FromPacket failed|ret:%d", ret);
+    LLOG_DEBUG("pkg_head info|%s", pkg_head.ToString().c_str());
 
-    // auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
-    // auto ctx = RpcCoroMgr::GetInst().Pop(coro_uid);
-    // CO_COND_RET_ELOG(ctx.handle == nullptr || ctx.rsp == nullptr,
-    // protocol::ErrorCode::FAILURE,
-    //                  "coro context not found|cmd:0x%08X|seq_id:%lu", pkg_head.cmd,
-    //                  coro_uid);
-    // // 解析 rsp
-    // ret = packet.Read(*ctx.rsp);
-    // CO_COND_RET_ELOG(ret != LLBC_OK, ret, "read rsp failed|ret:%d", ret);
-    // session_id_ = ctx.session_id;
-    // LLOG_INFO("received rsp|address:%p|info: %s|sesson_id:%d", ctx.rsp,
-    // ctx.rsp->DebugString().c_str(), session_id_);
+    auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
+    auto ctx = RpcCoroMgr::GetInst().PopCoroContext(coro_uid);
+    COND_RET_ELOG(ctx.handle == nullptr || ctx.rsp == nullptr, ,
+                  "coro context not found|cmd:0x%08X|seq_id:%lu", pkg_head.cmd, coro_uid);
+    // 解析 rsp
+    ret = packet.Read(*ctx.rsp);
+    COND_RET_ELOG(ret != LLBC_OK, , "read rsp failed|ret:%d", ret);
+    session_id_ = ctx.session_id;
+    LLOG_INFO("received rsp|address:%p|info: %s|sesson_id:%d", ctx.rsp,
+              ctx.rsp->DebugString().c_str(), session_id_);
 
-    // ctx.handle.resume();
-    // LLOG_INFO("coro is done|%u", ctx.handle.done());
-    // co_return 0;
+    ctx.handle.resume();
 }
 
-void RpcServiceMgr::OnRpcDone(const RpcChannel::PkgHead &pkg_head,
-                              const ::google::protobuf::Message &rsp) {
-    static llbc::LLBC_Packet packet;
+void RpcServiceMgr::OnRpcDone(RpcController *controller,
 
-    packet.SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
-    packet.SetSessionId(session_id_);
+                              ::google::protobuf::Message *rsp) {
+    // static llbc::LLBC_Packet packet;
 
-    int ret = pkg_head.ToPacket(packet);
-    COND_RET_ELOG(ret != 0, , "pkg_head.ToPacket failed|ret:%d", ret);
+    // packet.SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
+    // packet.SetSessionId(session_id_);
 
-    ret = packet.Write(rsp);
-    COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
+    // int ret = pkg_head.ToPacket(packet);
+    // COND_RET_ELOG(ret != 0, , "pkg_head.ToPacket failed|ret:%d", ret);
 
-    conn_mgr_->PushPacket(packet);
+    // ret = packet.Write(*rsp);
+    // COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
+
+    // conn_mgr_->PushPacket(packet);
 }
