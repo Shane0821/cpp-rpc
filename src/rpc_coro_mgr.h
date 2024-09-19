@@ -23,6 +23,12 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
         ::google::protobuf::Message *rsp = nullptr;
     };
 
+    struct contextCmp {
+        bool operator()(context &a, context &b) {
+            return a.timeoutTime_ < b.timeoutTime_;
+        }
+    };
+
     virtual ~RpcCoroMgr() = default;
 
     int Init() { return 0; }
@@ -39,16 +45,9 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
         return suspended_contexts_.insert({coro_uid, ctx}).second;
     }
 
-    context PopCoroContext(coro_uid_type coro_uid) {
-        if (auto iter = suspended_contexts_.find(coro_uid);
-            iter != suspended_contexts_.end()) {
-            auto ctx = iter->second;
-            suspended_contexts_.erase(iter);
-            return ctx;
-        }
-        LLOG_ERROR("coro_uid not found|coro_uid:%lu", coro_uid);
-        return context{.handle = nullptr, .rsp = nullptr};
-    }
+    context PopCoroContext(coro_uid_type coro_uid);
+
+    void HandleCoroTimeout();
 
     static constexpr int CORO_TIME_OUT = 10000;  // 10s
 
@@ -57,6 +56,7 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
 
    private:
     std::unordered_map<coro_uid_type, context> suspended_contexts_;
+    llbc::LLBC_Heap<context, std::vector<context>, contextCmp> coroHeap_;
     // coro_uid generator, which should generate unique id without `0`.
     coro_uid_type coro_uid_generator_ = 0UL;
     bool use_coro_ = false;
