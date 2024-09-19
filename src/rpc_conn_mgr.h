@@ -28,10 +28,10 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     // unsubscribe  cmdId's data packet
     void Unsubscribe(int cmdId);
 
-    int PushPacket(llbc::LLBC_Packet &sendPacket) {
-        return comp_->PushPacket(sendPacket);
+    int SendPacket(llbc::LLBC_Packet &sendPacket) {
+        return comp_->PushSendPacket(sendPacket);
     }
-    int PopPacket(llbc::LLBC_Packet &recvPacket) { return comp_->PopPacket(recvPacket); }
+    int RecvPacket(llbc::LLBC_Packet &recvPacket) { return comp_->PopRecvPacket(recvPacket); }
 
     bool IsServer() { return is_server_; }
     // Handle rpc data packets. The main loop should call this function.

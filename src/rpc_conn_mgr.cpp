@@ -4,11 +4,10 @@
 #include "rpc_macros.h"
 
 RpcConnMgr::~RpcConnMgr() noexcept {
+    delete comp_;
     if (svc_) {
         svc_->Stop();
-        delete svc_;
     }
-    delete comp_;
 }
 
 int RpcConnMgr::Init() noexcept {
@@ -55,7 +54,7 @@ int RpcConnMgr::CloseSession(int sessionId) {
 
 void RpcConnMgr::Tick() noexcept {
     static llbc::LLBC_Packet packet;
-    while (PopPacket(packet) == LLBC_OK) {
+    while (RecvPacket(packet) == LLBC_OK) {
         LLOG_TRACE("Tick");
         auto it = packet_delegs_.find(packet.GetOpcode());
         if (it == packet_delegs_.end())
@@ -66,7 +65,7 @@ void RpcConnMgr::Tick() noexcept {
 }
 
 int RpcConnMgr::Subscribe(int cmdId,
-                       const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg) {
+                          const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg) {
     auto pair = packet_delegs_.emplace(cmdId, deleg);
     COND_RET(!pair.second, LLBC_FAILED);
     return LLBC_OK;

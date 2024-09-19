@@ -18,10 +18,10 @@ class RpcConnComp : public llbc::LLBC_Component {
     virtual void OnUnHandledPacket(const llbc::LLBC_Packet &packet);
     virtual void OnProtoReport(const llbc::LLBC_ProtoReport &report);
 
-    // send packet
-    int PushPacket(llbc::LLBC_Packet &sendPacket) noexcept;
-    // recv packet
-    int PopPacket(llbc::LLBC_Packet &recvPacket) noexcept;
+    // push send packet
+    int PushSendPacket(llbc::LLBC_Packet &sendPacket) noexcept;
+    // pop recv packet
+    int PopRecvPacket(llbc::LLBC_Packet &recvPacket) noexcept;
     // callback when recv packet
     void OnRecvPacket(llbc::LLBC_Packet &packet) noexcept;
 

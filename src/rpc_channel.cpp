@@ -63,6 +63,6 @@ int RpcChannel::Send(const PkgHead &pkg_head,
     LLOG_DEBUG("send data|message: %s|packet: %s", message.ShortDebugString().c_str(),
                packet.ToString().c_str());
 
-    connMgr_->PushPacket(packet);
+    connMgr_->SendPacket(packet);
     return 0;
 }

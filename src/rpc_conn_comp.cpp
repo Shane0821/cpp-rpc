@@ -51,12 +51,12 @@ void RpcConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) noexcept {
     recvQueue_.emplace(recvPacket);
 }
 
-int RpcConnComp::PushPacket(llbc::LLBC_Packet &sendPacket) noexcept {
+int RpcConnComp::PushSendPacket(llbc::LLBC_Packet &sendPacket) noexcept {
     if (sendQueue_.emplace(sendPacket)) return LLBC_OK;
     return LLBC_FAILED;
 }
 
-int RpcConnComp::PopPacket(llbc::LLBC_Packet &recvPacket) noexcept {
+int RpcConnComp::PopRecvPacket(llbc::LLBC_Packet &recvPacket) noexcept {
     if (recvQueue_.pop(recvPacket)) return LLBC_OK;
     return LLBC_FAILED;
 }

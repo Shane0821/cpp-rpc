@@ -96,5 +96,5 @@ void RpcServiceMgr::OnRpcDone(RpcController *controller,
     ret = packet.Write(*rsp);
     COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
 
-    conn_mgr_->PushPacket(packet);
+    conn_mgr_->SendPacket(packet);
 }
