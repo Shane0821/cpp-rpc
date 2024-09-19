@@ -34,27 +34,6 @@ bool RpcServiceMgr::RegisterChannel(const char *ip, int32_t port) {
     return true;
 }
 
-void RpcServiceMgr::Rpc(std::uint32_t cmd, std::uint64_t uid,
-                        const ::google::protobuf::Message &req,
-                        ::google::protobuf::Message *rsp, std::uint32_t timeout) {
-    LLOG_TRACE("call rpc|uid:%lu|req: %s", uid, req.ShortDebugString().c_str());
-    assert(!channels_.empty());
-
-    // std::uint64_t seq_id = RpcCoroMgr::GetInst().NewCoroUid();
-    // PkgHead pkg_head{.src = 0UL, .dst = 0UL, .uid = uid, .seq = seq_id, .cmd = cmd};
-    // auto *channel = channels_[uid % channels_.size()];
-    // channel->Send(pkg_head, req);
-
-    // if (rsp) {
-    //     COND_EXP(seq_id == 0UL, channel->BlockingWaitResponse(rsp); co_return 0);  //
-    //     针对 client 先阻塞 RpcCoroMgr::context context{.session_id = session_id_, .rsp
-    //     = rsp}; co_await mt::dump_call_stack(); co_await SaveContextAwaiter{seq_id,
-    //     context}; LLOG_INFO("RESUME TO CURRENT COROUTINE"); co_await
-    //     mt::dump_call_stack();
-    // }
-    // co_return 0;
-}
-
 void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
@@ -105,18 +84,17 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
 }
 
 void RpcServiceMgr::OnRpcDone(RpcController *controller,
-
                               ::google::protobuf::Message *rsp) {
-    // static llbc::LLBC_Packet packet;
+    static llbc::LLBC_Packet packet;
 
-    // packet.SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
-    // packet.SetSessionId(session_id_);
+    packet.SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
+    packet.SetSessionId(session_id_);
 
-    // int ret = pkg_head.ToPacket(packet);
-    // COND_RET_ELOG(ret != 0, , "pkg_head.ToPacket failed|ret:%d", ret);
+    int ret = controller->GetPkgHead().ToPacket(packet);
+    COND_RET_ELOG(ret != 0, , "pkg_head.ToPacket failed|ret:%d", ret);
 
-    // ret = packet.Write(*rsp);
-    // COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
+    ret = packet.Write(*rsp);
+    COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
 
-    // conn_mgr_->PushPacket(packet);
+    conn_mgr_->PushPacket(packet);
 }

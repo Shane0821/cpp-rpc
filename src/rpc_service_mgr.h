@@ -27,9 +27,6 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     bool AddService(::google::protobuf::Service *service);
     bool RegisterChannel(const char *ip, int32_t port);
 
-    void Rpc(std::uint32_t cmd, std::uint64_t uid, const ::google::protobuf::Message &req,
-             ::google::protobuf::Message *rsp = nullptr, std::uint32_t timeout = 0U);
-
    protected:
     RpcServiceMgr() = default;
 
@@ -39,8 +36,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     void HandleRpcRsp(llbc::LLBC_Packet &packet);
 
     // 处理 RPC 结束回调
-    void OnRpcDone(RpcController *controller,
-                   ::google::protobuf::Message *rsp);
+    void OnRpcDone(RpcController *controller, ::google::protobuf::Message *rsp);
 
    private:
     ConnMgr *conn_mgr_ = nullptr;
