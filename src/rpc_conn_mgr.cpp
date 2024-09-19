@@ -19,6 +19,8 @@ int RpcConnMgr::Init() noexcept {
     svc_ = llbc::LLBC_Service::Create("Svc");
     comp_ = new RpcConnComp;
     svc_->AddComponent(comp_);
+    svc_->SetDriveMode(llbc::LLBC_ServiceDriveMode::ExternalDrive);
+    svc_->SetFPS(1000);
     svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp_, &RpcConnComp::OnRecvPacket);
     svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp_, &RpcConnComp::OnRecvPacket);
     svc_->SuppressCoderNotFoundWarning();

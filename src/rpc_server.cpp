@@ -36,7 +36,6 @@ void RpcServer::Serve() {
     while (!stop_) {
         RpcCoroMgr::GetInst().HandleCoroTimeout();
         RpcConnMgr::GetInst().Tick();
-        llbc::LLBC_Sleep(1);
     }
 
     LLOG_INFO(">>> RPC SERVER STOP SERVING <<<");
