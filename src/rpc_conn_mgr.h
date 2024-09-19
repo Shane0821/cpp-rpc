@@ -35,6 +35,7 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
         return comp_->PopRecvPacket(recvPacket);
     }
 
+    bool IsServer() { return is_server_; }
     // Handle rpc data packets. The main loop should call this function.
     void Tick() noexcept;
 
@@ -44,6 +45,7 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
    private:
     llbc::LLBC_Service *svc_ = nullptr;
     RpcConnComp *comp_ = nullptr;
+    bool is_server_ = false;
     int server_sessionId_ = 0;
     std::unordered_map<int, llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>>
         packet_delegs_;  // {cmdId : delegate}
