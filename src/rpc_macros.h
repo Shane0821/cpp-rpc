@@ -2,6 +2,7 @@
 #define _RPC_MACROS_H
 
 #include <llbc.h>
+#include <coroutine>
 
 #define COND_EXP(condition, expr, ...) \
     {                                  \
