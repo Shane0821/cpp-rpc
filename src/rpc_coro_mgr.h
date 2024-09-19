@@ -47,14 +47,37 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
         return suspended_contexts_.insert({coro_uid, ctx}).second;
     }
 
-    context PopCoroContext(coro_uid_type coro_uid);
+    context PopCoroContext(coro_uid_type coro_uid) {
+        if (auto iter = suspended_contexts_.find(coro_uid);
+            iter != suspended_contexts_.end()) {
+            auto ctx = iter->second;
+            suspended_contexts_.erase(iter);
+            return ctx;
+        }
+        LLOG_ERROR("coro_uid not found|coro_uid:%lu", coro_uid);
+        return context{.handle = nullptr, .rsp = nullptr};
+    }
 
-    void HandleCoroTimeout();
+    void HandleCoroTimeout() {
+        llbc::sint64 now = llbc::LLBC_GetMilliseconds();
+        while (!coroHeap_.empty()) {
+            auto &top = coroHeap_.top();
+            if (top.timeoutTime_ > now) {
+                break;
+            }
+            auto ctx = PopCoroContext(top.session_id);
+            if (ctx.handle) {
+                ctx.handle.destroy();
+            }
+            ctx.controller->SetFailed("rpc coro timeout");
+            coroHeap_.pop();
+        }
+    }
 
     static constexpr int CORO_TIME_OUT = 10000;  // 10s
 
    protected:
-    RpcCoroMgr() {}
+    RpcCoroMgr() = default;
 
    private:
     std::unordered_map<coro_uid_type, context> suspended_contexts_;
