@@ -44,14 +44,14 @@ int main(int argc, char *argv[]) {
     }
     LLOG_TRACE("Hello Server!");
 
-    ret = ConnMgr::GetInst().Init();
-    COND_RET_ELOG(ret != 0, ret, "ConnMgr init failed|ret:%d", ret);
+    ret = RpcConnMgr::GetInst().Init();
+    COND_RET_ELOG(ret != 0, ret, "RpcConnMgr init failed|ret:%d", ret);
 
     // 启动 rpc 服务
-    COND_RET_ELOG(ConnMgr::GetInst().StartRpcService("127.0.0.1", 6688) != LLBC_OK, -1,
-                  "ConnMgr StartRpcService failed");
+    COND_RET_ELOG(RpcConnMgr::GetInst().StartRpcService("127.0.0.1", 6688) != LLBC_OK, -1,
+                  "RpcConnMgr StartRpcService failed");
 
-    ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
+    ret = RpcServiceMgr::GetInst().Init(&RpcConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
     // bool succ = RpcServiceMgr::GetInst().AddService(nullptr);
     // COND_RET_ELOG(!succ, EXIT_FAILURE, "add service failed");

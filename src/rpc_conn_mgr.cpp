@@ -3,7 +3,7 @@
 #include "rpc_channel.h"
 #include "rpc_macros.h"
 
-ConnMgr::~ConnMgr() noexcept {
+RpcConnMgr::~RpcConnMgr() noexcept {
     if (svc_) {
         svc_->Stop();
         delete svc_;
@@ -11,25 +11,25 @@ ConnMgr::~ConnMgr() noexcept {
     delete comp_;
 }
 
-int ConnMgr::Init() noexcept {
+int RpcConnMgr::Init() noexcept {
     if (svc_) {
         LLOG_ERROR("Service already started");
         return LLBC_FAILED;
     }
     // Create service
     svc_ = llbc::LLBC_Service::Create("Svc");
-    comp_ = new ConnComp;
+    comp_ = new RpcConnComp;
     svc_->AddComponent(comp_);
-    svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp_, &ConnComp::OnRecvPacket);
-    svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp_, &ConnComp::OnRecvPacket);
+    svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp_, &RpcConnComp::OnRecvPacket);
+    svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp_, &RpcConnComp::OnRecvPacket);
     svc_->SuppressCoderNotFoundWarning();
     auto ret = svc_->Start(4);
     LLOG_TRACE("Service start, ret: %d", ret);
     return ret;
 }
 
-int ConnMgr::StartRpcService(const char *ip, int port) {
-    LLOG_TRACE("ConnMgr StartRpcService");
+int RpcConnMgr::StartRpcService(const char *ip, int port) {
+    LLOG_TRACE("RpcConnMgr StartRpcService");
     LLOG_TRACE("Server will listen on %s:%d", ip, port);
     int server_sessionId_ = svc_->Listen(ip, port);
     COND_RET_ELOG(server_sessionId_ == 0, LLBC_FAILED,
@@ -38,7 +38,7 @@ int ConnMgr::StartRpcService(const char *ip, int port) {
     return LLBC_OK;
 }
 
-RpcChannel *ConnMgr::CreateRpcChannel(const char *ip, int port) {
+RpcChannel *RpcConnMgr::CreateRpcChannel(const char *ip, int port) {
     LLOG_TRACE("CreateRpcChannel");
 
     auto sessionId = svc_->Connect(ip, port);
@@ -48,12 +48,12 @@ RpcChannel *ConnMgr::CreateRpcChannel(const char *ip, int port) {
     return new RpcChannel(this, sessionId);
 }
 
-int ConnMgr::CloseSession(int sessionId) {
+int RpcConnMgr::CloseSession(int sessionId) {
     LLOG_TRACE("CloseSession, %d", sessionId);
     return svc_->RemoveSession(sessionId);
 }
 
-void ConnMgr::Tick() noexcept {
+void RpcConnMgr::Tick() noexcept {
     static llbc::LLBC_Packet packet;
     while (PopPacket(packet) == LLBC_OK) {
         LLOG_TRACE("Tick");
@@ -65,11 +65,11 @@ void ConnMgr::Tick() noexcept {
     }
 }
 
-int ConnMgr::Subscribe(int cmdId,
+int RpcConnMgr::Subscribe(int cmdId,
                        const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg) {
     auto pair = packet_delegs_.emplace(cmdId, deleg);
     COND_RET(!pair.second, LLBC_FAILED);
     return LLBC_OK;
 }
 
-void ConnMgr::Unsubscribe(int cmdId) { packet_delegs_.erase(cmdId); }
+void RpcConnMgr::Unsubscribe(int cmdId) { packet_delegs_.erase(cmdId); }

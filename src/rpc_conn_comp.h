@@ -2,10 +2,10 @@
 #include <spsc_queue.h>
 
 // Connection management component
-class ConnComp : public llbc::LLBC_Component {
+class RpcConnComp : public llbc::LLBC_Component {
    public:
-    ConnComp();
-    virtual ~ConnComp() {}
+    RpcConnComp();
+    virtual ~RpcConnComp() {}
 
     virtual bool OnInit(bool &initFinished);
     virtual void OnDestroy(bool &destroyFinished);

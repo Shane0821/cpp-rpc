@@ -28,7 +28,7 @@ RpcCoro InnerCallMeathod(::google::protobuf::RpcController *controller,
     innerReq.set_msg("Relay Call >>>>>>" + req->msg());
     echo::EchoResponse innerRsp;
     // create rpc channel
-    RpcChannel *channel = ConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
+    RpcChannel *channel = RpcConnMgr::GetInst().CreateRpcChannel("127.0.0.1", 6699);
     if (!channel) {
         LLOG_INFO("GetRpcChannel Fail");
         rsp->set_msg(req->msg() + " ---- inner rpc call server not exist");

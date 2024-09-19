@@ -5,9 +5,9 @@
 #include "rpc_coro_mgr.h"
 #include "rpc_macros.h"
 
-int RpcServiceMgr::Init(ConnMgr *conn_mgr) {
+int RpcServiceMgr::Init(RpcConnMgr *conn_mgr) {
     COND_RET_ELOG(conn_mgr_ != nullptr, LLBC_FAILED,
-                  "ConnMgr has already been registered|address:%p", conn_mgr_);
+                  "RpcConnMgr has already been registered|address:%p", conn_mgr_);
     conn_mgr_ = conn_mgr;
     if (conn_mgr_) [[likely]] {
         conn_mgr_->Subscribe(RpcChannel::RpcOpCode::RpcReq,

@@ -7,7 +7,7 @@
 #include <llbc.h>
 #include <stdlib.h>
 
-class ConnMgr;
+class RpcConnMgr;
 
 class RpcChannel : public ::google::protobuf::RpcChannel {
    public:
@@ -43,7 +43,7 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
         const std::string &ToString() const;
     };
 
-    RpcChannel(ConnMgr *connMgr, int sessionId)
+    RpcChannel(RpcConnMgr *connMgr, int sessionId)
         : connMgr_(connMgr), sessionId_(sessionId) {}
     virtual ~RpcChannel();
 
@@ -57,7 +57,7 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     static constexpr std::size_t MAX_BUFFER_SIZE = 1024UL;
 
    private:
-    ConnMgr *connMgr_ = nullptr;
+    RpcConnMgr *connMgr_ = nullptr;
     int sessionId_ = 0;
 };
 

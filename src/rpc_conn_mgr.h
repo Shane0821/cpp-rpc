@@ -8,11 +8,11 @@
 
 class RpcChannel;
 
-class ConnMgr : public Singleton<ConnMgr> {
-    friend class Singleton<ConnMgr>;
+class RpcConnMgr : public Singleton<RpcConnMgr> {
+    friend class Singleton<RpcConnMgr>;
 
    public:
-    virtual ~ConnMgr() noexcept;
+    virtual ~RpcConnMgr() noexcept;
 
     int Init() noexcept;
     // start rpc service and listen on ip:port
@@ -38,11 +38,11 @@ class ConnMgr : public Singleton<ConnMgr> {
     void Tick() noexcept;
 
    protected:
-    ConnMgr() = default;
+    RpcConnMgr() = default;
 
    private:
     llbc::LLBC_Service *svc_ = nullptr;
-    ConnComp *comp_ = nullptr;
+    RpcConnComp *comp_ = nullptr;
     bool is_server_ = false;
     int server_sessionId_ = 0;
     std::unordered_map<int, llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>>

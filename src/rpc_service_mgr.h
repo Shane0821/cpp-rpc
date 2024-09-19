@@ -10,7 +10,7 @@
 #include "rpc_channel.h"
 
 class RpcController;
-class ConnMgr;
+class RpcConnMgr;
 
 class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     friend class Singleton<RpcServiceMgr>;
@@ -23,7 +23,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
 
     virtual ~RpcServiceMgr();
 
-    int Init(ConnMgr *conn_mgr);
+    int Init(RpcConnMgr *conn_mgr);
     bool AddService(::google::protobuf::Service *service);
     bool RegisterChannel(const char *ip, int32_t port);
 
@@ -39,7 +39,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     void OnRpcDone(RpcController *controller, ::google::protobuf::Message *rsp);
 
    private:
-    ConnMgr *conn_mgr_ = nullptr;
+    RpcConnMgr *conn_mgr_ = nullptr;
     int session_id_;
 
     std::vector<RpcChannel *> channels_;

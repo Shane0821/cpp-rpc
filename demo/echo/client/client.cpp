@@ -53,14 +53,14 @@ int main(int argc, char *argv[]) {
     }
 
     // 初始化连接管理器
-    ret = ConnMgr::GetInst().Init();
-    COND_RET_ELOG(ret != LLBC_OK, -1, "init ConnMgr failed|error: %s",
+    ret = RpcConnMgr::GetInst().Init();
+    COND_RET_ELOG(ret != LLBC_OK, -1, "init RpcConnMgr failed|error: %s",
                   llbc::LLBC_FormatLastError());
 
     // RpcCoroMgr::GetInst().UseCoro(false);  // 客户端默认不用协程，一直阻塞等待回包
 
     // 协程方案, 在新协程中 call rpc
-    ret = RpcServiceMgr::GetInst().Init(&ConnMgr::GetInst());
+    ret = RpcServiceMgr::GetInst().Init(&RpcConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
     RpcServiceMgr::GetInst().RegisterChannel("127.0.0.1", 6688);
 
