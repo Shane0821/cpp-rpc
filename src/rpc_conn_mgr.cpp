@@ -55,6 +55,7 @@ int RpcConnMgr::CloseSession(int sessionId) {
 }
 
 void RpcConnMgr::Tick() noexcept {
+    svc_->OnSvc(true);
     static llbc::LLBC_Packet packet;
     while (RecvPacket(packet) == LLBC_OK) {
         LLOG_TRACE("Tick");
