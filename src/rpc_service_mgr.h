@@ -23,7 +23,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
 
     virtual ~RpcServiceMgr();
 
-    int Init(RpcConnMgr *conn_mgr) noexcept ;
+    int Init(RpcConnMgr *conn_mgr) noexcept;
     bool AddService(::google::protobuf::Service *service) noexcept;
     bool RegisterChannel(const char *ip, int32_t port) noexcept;
 
