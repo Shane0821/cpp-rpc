@@ -34,9 +34,7 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
         std::uint32_t dst = 0U;
         std::uint64_t uid = 0UL;
         std::uint64_t seq = 0UL;  // coro_uid
-        std::uint32_t cmd = 0U;
-        std::int8_t flag = 0;
-        std::int8_t type = 0;
+        std::uint32_t cmd = 0U;   // method_desc->options().GetExtension(RPC_CMD);
 
         int FromPacket(llbc::LLBC_Packet &packet);
         int ToPacket(llbc::LLBC_Packet &packet) const;
@@ -52,7 +50,6 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
                             const ::google::protobuf::Message *request,
                             ::google::protobuf::Message *response,
                             ::google::protobuf::Closure *done) override;
-    int Send(const PkgHead &pkg_head, const ::google::protobuf::Message &message);
 
     static constexpr std::size_t MAX_BUFFER_SIZE = 1024UL;
 
