@@ -6,41 +6,42 @@
 
 RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
 
-int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) {
-    int ret = packet.Read(dst);
-    COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.dst failed|ret:%d", ret);
-    ret = packet.Read(cmd);
-    COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.cmd failed|ret:%d", ret);
-    ret = packet.Read(uid);
+int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) noexcept {
+    int ret = packet.Read(uid);
     COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.uid failed|ret:%d", ret);
     ret = packet.Read(seq);
     COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.seq failed|ret:%d", ret);
+    ret = packet.Read(service_name);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.service_name failed|ret:%d", ret);
+    ret = packet.Read(method_name);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.method_name failed|ret:%d", ret);
 
     LLOG_TRACE("read net packet done|%s|session_id:%d", ToString().c_str(),
                packet.GetSessionId());
     return 0;
 }
 
-int RpcChannel::PkgHead::ToPacket(llbc::LLBC_Packet &packet) const {
-    int ret = packet.Write(static_cast<std::uint32_t>(dst));
-    COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.dst failed|ret:%d", ret);
-    ret = packet.Write(static_cast<std::uint32_t>(cmd));
-    COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.cmd failed|ret:%d", ret);
-    ret = packet.Write(static_cast<std::uint64_t>(uid));
+int RpcChannel::PkgHead::ToPacket(llbc::LLBC_Packet &packet) const noexcept {
+    int ret = packet.Write(static_cast<std::uint32_t>(uid));
     COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.uid failed|ret:%d", ret);
-    ret = packet.Write(static_cast<std::uint64_t>(seq));
+    ret = packet.Write(static_cast<std::uint32_t>(seq));
     COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.seq failed|ret:%d", ret);
+    ret = packet.Write(service_name);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.service_name failed|ret:%d", ret);
+    ret = packet.Write(method_name);
+    COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.method_name failed|ret:%d", ret);
 
     LLOG_TRACE("write net packet done|%s|sessond_id:%d", ToString().c_str(),
                packet.GetSessionId());
     return 0;
 }
 
-const std::string &RpcChannel::PkgHead::ToString() const {
+const std::string &RpcChannel::PkgHead::ToString() const noexcept {
     static std::string buffer;
     std::string().swap(buffer);
-    ::snprintf(buffer.data(), MAX_BUFFER_SIZE, "src:%u|dst:%u|uid:%lu|seq:%lu|cmd:0x%08X",
-               src, dst, uid, seq, cmd);
+    ::snprintf(buffer.data(), MAX_BUFFER_SIZE,
+               "uid:%lu|seq:%lu|service_name:%s|method_name:%s", uid, seq, service_name.c_str(),
+               method_name.c_str());
     return buffer;
 }
 

@@ -20,25 +20,26 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     //
     //   0                         32                        64
     //   +-------------------------+-------------------------+
-    //   |           dst           |           cmd           |
-    //   +-------------------------+-------------------------+
     //   |                        uid                        |
     //   +---------------------------------------------------+
     //   |                        seq                        |
+    //   +---------------------------------------------------+
+    //   |                    service_name                   |
+    //   +---------------------------------------------------+
+    //   |                    method_name                    |
     //   +---------------------------------------------------+
     //   |                    body(message)                  |
     //   +---------------------------------------------------+
     //
     struct PkgHead {
-        std::uint32_t src = 0U;
-        std::uint32_t dst = 0U;
         std::uint64_t uid = 0UL;  // usr id
         std::uint64_t seq = 0UL;  // coro_uid
-        std::uint32_t cmd = 0U;   // method_desc->options().GetExtension(RPC_CMD);
+        std::string service_name;
+        std::string method_name;
 
-        int FromPacket(llbc::LLBC_Packet &packet);
-        int ToPacket(llbc::LLBC_Packet &packet) const;
-        const std::string &ToString() const;
+        int FromPacket(llbc::LLBC_Packet &packet) noexcept;
+        int ToPacket(llbc::LLBC_Packet &packet) const noexcept;
+        const std::string &ToString() const noexcept;
     };
 
     RpcChannel(RpcConnMgr *connMgr, int sessionId)

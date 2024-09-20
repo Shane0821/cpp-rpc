@@ -23,9 +23,9 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
 
     virtual ~RpcServiceMgr();
 
-    int Init(RpcConnMgr *conn_mgr);
-    bool AddService(::google::protobuf::Service *service);
-    bool RegisterChannel(const char *ip, int32_t port);
+    int Init(RpcConnMgr *conn_mgr) noexcept ;
+    bool AddService(::google::protobuf::Service *service) noexcept;
+    bool RegisterChannel(const char *ip, int32_t port) noexcept;
 
    protected:
     RpcServiceMgr() = default;
@@ -43,7 +43,8 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     int session_id_;
 
     std::vector<RpcChannel *> channels_;
-    std::unordered_map<std::uint32_t, ServiceInfo> service_methods_;
+    std::unordered_map<std::string, std::unordered_map<std::string, ServiceInfo>>
+        service_methods_;
 };  // RpcServiceMgr
 
 #endif  // _RPC_SERVICE_MGR_H_
