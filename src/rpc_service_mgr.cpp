@@ -53,28 +53,31 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
     COND_RET_ELOG(ret != 0, , "pkg_head.FromPacket failed|ret:%d", ret);
     session_id_ = packet.GetSessionId();
 
-    // auto iter = service_methods_.find(pkg_head.cmd);
-    // COND_RET_ELOG(iter == service_methods_.end(), ,
-    //               "service and method not found|cmd:%08X", pkg_head.cmd);
-    // auto *service = iter->second.service;
-    // const auto *method = iter->second.md;
+    auto it = service_methods_.find(pkg_head.service_name);
+    COND_RET_ELOG(it == service_methods_.end(), , "service not found|service_name:%s",
+                  pkg_head.service_name.c_str());
+    auto iter = it->second.find(pkg_head.method_name);
+    COND_RET_ELOG(iter == it->second.end(), , "method not found|method_name:%08X",
+                  pkg_head.method_name.c_str());
+    auto *service = iter->second.service;
+    const auto *md = iter->second.md;
 
-    // // 解析 req & 创建 rsp
-    // auto *req = service->GetRequestPrototype(method).New();
-    // LLOG_TRACE("packet: %s", packet.ToString().c_str());
-    // ret = packet.Read(*req);
-    // COND_RET_ELOG(ret != LLBC_OK, , "read req failed|ret:%d|reason: %s", ret,
-    //               llbc::LLBC_FormatLastError());
-    // auto *rsp = service->GetResponsePrototype(method).New();
+    // parse req
+    auto *req = service->GetRequestPrototype(md).New();
+    LLOG_TRACE("packet: %s", packet.ToString().c_str());
+    ret = packet.Read(*req);
+    COND_RET_ELOG(ret != LLBC_OK, , "read req failed|ret:%d|reason:%s", ret,
+                  llbc::LLBC_FormatLastError());
+    // create rsp
+    auto *rsp = service->GetResponsePrototype(md).New();
 
-    // auto controller = new RpcController();
-    // // TODO: auto controller = objPool.Get<RpcController>();
-    // controller->SetPkgHead(pkg_head);
-    // // create call back on rpc done
-    // auto done =
-    //     ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, controller,
-    //     rsp);
-    // service->CallMethod(method, controller, req, rsp, done);
+    auto controller = new RpcController();
+    // TODO: auto controller = objPool.Get<RpcController>();
+    controller->SetPkgHead(pkg_head);
+    // create call back on rpc done
+    auto done =
+        ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, controller, rsp);
+    service->CallMethod(md, controller, req, rsp, done);
 }
 
 void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
@@ -102,6 +105,9 @@ void RpcServiceMgr::OnRpcDone(RpcController *controller,
                               ::google::protobuf::Message *rsp) {
     llbc::LLBC_Packet *packet =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+    COND_RET_ELOG(!packet, , "alloc packet from obj pool failed|pkg_head: %s|rsp: %s",
+                  controller->GetPkgHead().ToString().c_str(),
+                  rsp->ShortDebugString().c_str());
 
     packet->SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
     packet->SetSessionId(session_id_);
@@ -113,4 +119,5 @@ void RpcServiceMgr::OnRpcDone(RpcController *controller,
     COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
 
     conn_mgr_->SendPacket(*packet);
+    delete controller;
 }
