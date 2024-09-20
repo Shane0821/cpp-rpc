@@ -9,10 +9,10 @@
 class RpcCoro {
    public:
     struct promise_type {
-        auto get_return_object() { return RpcCoro{handle_type::from_promise(*this)}; }
-
-        auto initial_suspend() { return std::suspend_never{}; }
-        //
+        auto get_return_object() noexcept {
+            return RpcCoro{handle_type::from_promise(*this)};
+        }
+        auto initial_suspend() noexcept { return std::suspend_never{}; }
         auto final_suspend() noexcept {
             // std::suspend_always: The coroutine suspends at the end, requiring explicit
             // resumption by the caller.
@@ -20,9 +20,9 @@ class RpcCoro {
             // immediate cleanup and continuation without needing to resume.
             return std::suspend_never{};
         }
-        void unhandled_exception() { std::terminate(); }
-        void return_void() {}
-        auto yield_value() { return std::suspend_always{}; }
+        void unhandled_exception() noexcept { std::terminate(); }
+        void return_void() noexcept {}
+        auto yield_value() noexcept { return std::suspend_always{}; }
     };
 
     using handle_type = std::coroutine_handle<promise_type>;
