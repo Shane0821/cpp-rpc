@@ -7,9 +7,7 @@
 RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
 
 int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) noexcept {
-    int ret = packet.Read(uid);
-    COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.uid failed|ret:%d", ret);
-    ret = packet.Read(seq);
+    int ret = packet.Read(seq);
     COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.seq failed|ret:%d", ret);
     ret = packet.Read(service_name);
     COND_RET_ELOG(ret != LLBC_OK, ret, "read pkg_head.service_name failed|ret:%d", ret);
@@ -22,9 +20,7 @@ int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) noexcept {
 }
 
 int RpcChannel::PkgHead::ToPacket(llbc::LLBC_Packet &packet) const noexcept {
-    int ret = packet.Write(static_cast<std::uint32_t>(uid));
-    COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.uid failed|ret:%d", ret);
-    ret = packet.Write(static_cast<std::uint32_t>(seq));
+    int ret = packet.Write(static_cast<std::uint32_t>(seq));
     COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.seq failed|ret:%d", ret);
     ret = packet.Write(service_name);
     COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.service_name failed|ret:%d", ret);
@@ -39,9 +35,8 @@ int RpcChannel::PkgHead::ToPacket(llbc::LLBC_Packet &packet) const noexcept {
 const std::string &RpcChannel::PkgHead::ToString() const noexcept {
     static std::string buffer;
     std::string().swap(buffer);
-    ::snprintf(buffer.data(), MAX_BUFFER_SIZE,
-               "uid:%lu|seq:%lu|service_name:%s|method_name:%s", uid, seq, service_name.c_str(),
-               method_name.c_str());
+    ::snprintf(buffer.data(), MAX_BUFFER_SIZE, "seq:%lu|service_name:%s|method_name:%s",
+               seq, service_name.c_str(), method_name.c_str());
     return buffer;
 }
 
@@ -56,15 +51,16 @@ void RpcChannel::CallMethod(
     RpcController *rpcController = dynamic_cast<RpcController *>(controller);
     COND_RET_ELOG(rpcController == nullptr, , "controller is not RpcController");
 
-    response->Clear();
-
     llbc::LLBC_Packet *sendPacket =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
     sendPacket->SetHeader(sessionId_, RpcOpCode::RpcReq, 0);
 
-    // TODO: try to get seq id and uid
+    // set pkg_head
+    RpcChannel::PkgHead &pkgHead = rpcController->GetPkgHead();
+    pkgHead.service_name = method->service()->name();
+    pkgHead.method_name = method->name();
 
-    int ret = rpcController->GetPkgHead().ToPacket(*sendPacket);
+    int ret = pkgHead.ToPacket(*sendPacket);
     COND_RET_ELOG(ret != LLBC_OK, , "pkg_head.ToPacket failed|ret:%d", ret);
     ret = sendPacket->Write(*request);
     COND_RET_ELOG(ret != LLBC_OK, , "packet.Write message failed|ret:%d", ret);
