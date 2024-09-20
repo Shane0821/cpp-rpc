@@ -32,7 +32,7 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     struct PkgHead {
         std::uint32_t src = 0U;
         std::uint32_t dst = 0U;
-        std::uint64_t uid = 0UL;
+        std::uint64_t uid = 0UL;  // usr id
         std::uint64_t seq = 0UL;  // coro_uid
         std::uint32_t cmd = 0U;   // method_desc->options().GetExtension(RPC_CMD);
 
