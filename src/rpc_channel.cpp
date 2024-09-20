@@ -60,8 +60,9 @@ void RpcChannel::CallMethod(
 
     llbc::LLBC_Packet *sendPacket =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
-    sendPacket->SetHeader(0, RpcOpCode::RpcReq, 0);
-    sendPacket->SetSessionId(sessionId_);
+    sendPacket->SetHeader(sessionId_, RpcOpCode::RpcReq, 0);
+
+    // TODO: try to get seq id and uid
 
     int ret = rpcController->GetPkgHead().ToPacket(*sendPacket);
     COND_RET_ELOG(ret != LLBC_OK, , "pkg_head.ToPacket failed|ret:%d", ret);
