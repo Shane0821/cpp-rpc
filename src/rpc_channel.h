@@ -20,8 +20,6 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     //
     //   0                         32                        64
     //   +-------------------------+-------------------------+
-    //   |                        uid                        |
-    //   +---------------------------------------------------+
     //   |                        seq                        |
     //   +---------------------------------------------------+
     //   |                    service_name                   |
@@ -32,7 +30,6 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     //   +---------------------------------------------------+
     //
     struct PkgHead {
-        std::uint64_t uid = 0UL;  // usr id
         std::uint64_t seq = 0UL;  // coro_uid
         std::string service_name;
         std::string method_name;
