@@ -7,8 +7,8 @@
 
 class RpcController : public ::google::protobuf::RpcController {
    public:
-    RpcController() = default;
-    ~RpcController() = default;
+    RpcController() noexcept = default;
+    ~RpcController() noexcept = default;
     virtual void Reset() {}
     virtual bool Failed() const { return isFailed_; };
     virtual std::string ErrorText() const { return errorText_; };
@@ -20,8 +20,10 @@ class RpcController : public ::google::protobuf::RpcController {
     virtual bool IsCanceled() const { return false; }
     virtual void NotifyOnCancel(::google::protobuf::Closure* /* callback */) {}
 
-    void SetPkgHead(const RpcChannel::PkgHead& pkg_head) { pkg_head_ = pkg_head; }
-    const RpcChannel::PkgHead& GetPkgHead() const { return pkg_head_; }
+    void SetPkgHead(const RpcChannel::PkgHead& pkg_head) noexcept {
+        pkg_head_ = pkg_head;
+    }
+    RpcChannel::PkgHead& GetPkgHead() noexcept { return pkg_head_; }
 
    private:
     bool isFailed_ = false;
