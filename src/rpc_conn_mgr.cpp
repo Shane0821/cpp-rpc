@@ -68,7 +68,7 @@ void RpcConnMgr::Tick() noexcept {
         if (it == packet_delegs_.end())
             LLOG_ERROR("Recv Untapped opcode:%d", packet->GetOpcode());
         else
-            (it->second)(*packet);
+            (it->second)(*packet);  // handle rep or handle rsp
     }
 }
 
