@@ -5,6 +5,7 @@ include_directories(
     ${SRC_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/service
     ${CMAKE_CURRENT_LIST_DIR}/client
+    ${CMAKE_CURRENT_LIST_DIR}
 )
 
 aux_source_directory(
