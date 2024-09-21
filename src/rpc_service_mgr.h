@@ -42,7 +42,6 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
 
    private:
     RpcConnMgr *conn_mgr_ = nullptr;
-    int session_id_;
 
     std::vector<RpcChannel *> channels_;
     std::unordered_map<std::string, std::unordered_map<std::string, ServiceInfo>>

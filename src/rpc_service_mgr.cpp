@@ -2,6 +2,7 @@
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/descriptor.pb.h>
+#include <google/protobuf/text_format.h>
 
 #include "rpc_conn_mgr.h"
 #include "rpc_controller.h"
@@ -51,7 +52,6 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
     COND_RET_ELOG(ret != 0, , "pkg_head.FromPacket failed|ret:%d", ret);
-    session_id_ = packet.GetSessionId();
 
     auto it = service_methods_.find(pkg_head.service_name);
     COND_RET_ELOG(it == service_methods_.end(), , "service not found|service_name:%s",
@@ -73,6 +73,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
 
     auto controller = new RpcController();
     // TODO: auto controller = objPool.Get<RpcController>();
+    controller->SetSessionId(packet.GetSessionId());
     controller->SetPkgHead(pkg_head);
     // create call back on rpc done
     auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone,
@@ -88,17 +89,23 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
 
     auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
     auto ctx = RpcCoroMgr::GetInst().PopCoroContext(coro_uid);
-    COND_RET_ELOG(ctx.handle == nullptr || ctx.rsp == nullptr, ,
+    // possibly due to timeout
+    COND_RET_ELOG(ctx.handle == nullptr, ,
                   "coro context not found|seq_id:%lu|service_name:%s|method_name:%s|",
                   coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
-    // 解析 rsp
+    COND_RET_ELOG(ctx.rsp == nullptr, ,
+                  "coro rsp not instantiated|seq_id:%lu|service_name:%s|method_name:%s|",
+                  coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
+
+    // parse response
     ret = packet.Read(*ctx.rsp);
     COND_RET_ELOG(ret != LLBC_OK, , "read rsp failed|ret:%d", ret);
-    session_id_ = ctx.session_id;
-    LLOG_INFO("received rsp|address:%p|info: %s|sesson_id:%d", ctx.rsp,
-              ctx.rsp->DebugString().c_str(), session_id_);
+
+    LLOG_INFO("received rsp|address:%p|info:%s|sesson_id:%d", ctx.rsp,
+              ctx.rsp->DebugString().c_str(), ctx.session_id);
 
     ctx.handle.resume();
+    LLOG_INFO("coro is done|%u", ctx.handle.done());
 }
 
 void RpcServiceMgr::OnRpcDone(
@@ -120,17 +127,18 @@ void RpcServiceMgr::OnRpcDone(
                   req->ShortDebugString().c_str(), rsp->ShortDebugString().c_str());
 
     packet->SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
-    packet->SetSessionId(session_id_);
+    packet->SetSessionId(controller->GetSessionId());
 
     int ret = controller->GetPkgHead().ToPacket(*packet);
     COND_RET_ELOG(ret != 0, cleanUp(), "pkg_head.ToPacket failed|ret:%d", ret);
 
     if (controller->Failed()) {
         packet->SetStatus(LLBC_FAILED);
-        ret = packet->Write(controller->ErrorText());
-    } else {
-        ret = packet->Write(*rsp);
+        google::protobuf::TextFormat::ParseFromString(controller->ErrorText(), rsp);
     }
+
+    ret = packet->Write(*rsp);
+
     COND_RET_ELOG(ret != 0, cleanUp(), "packet.Write failed|ret:%d", ret);
 
     conn_mgr_->SendPacket(*packet);
