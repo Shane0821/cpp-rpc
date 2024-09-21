@@ -39,7 +39,7 @@ RpcCoro InnerCallMeathod(::google::protobuf::RpcController *controller,
 
     LLOG_INFO("call, msg:%s", innerReq.msg().c_str());
 
-    EchoClientImpl stub(channel);
+    EchoServiceStub stub(channel);
     // // RpcController cntl(co_await GetHandleAwaiter{});
     // // co_await stub.Echo(&cntl, &innerReq, &innerRsp, nullptr);
     // // LLOG_INFO("Recv rsp, status:%s, rsp:%s\n",
