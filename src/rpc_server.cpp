@@ -2,25 +2,85 @@
 
 #include <llbc.h>
 
+#include <csignal>
+
 #include "rpc_conn_mgr.h"
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
 
-int RpcServer::Init(const char *ip, int port) {
-    if (!stop_) {
-        LLOG_ERROR("RpcServer already started");
+RpcServer::~RpcServer() {
+    Stop();
+    // TODO: cleanup logic
+}
+
+void RpcServer::SignalHandler(int signum) {
+    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    RpcServer::GetInst().Stop();
+}
+
+void RpcServer::Init() {
+    if (initialized_) {
+        return;
+    }
+    // register signal SIGINT and signal handler
+    signal(SIGINT, SignalHandler);
+
+    // init llbc library
+    llbc::LLBC_Startup();
+    LLBC_Defer(llbc::LLBC_Cleanup());
+    initialized_ = true;
+}
+
+int RpcServer::SetLogConfPath(const char *log_conf_path) {
+    if (!initialized_) {
+        std::cout << "RpcServer not initialized.\n";
         return LLBC_FAILED;
     }
-    stop_ = false;
-    RpcConnMgr *connMgr = &RpcConnMgr::GetInst();
-    connMgr->Init();
-    RpcServiceMgr *serviceMgr = &RpcServiceMgr::GetInst();
-    serviceMgr->Init(connMgr);
-    if (connMgr->StartRpcService(ip, port) != LLBC_OK) {
-        LLOG_ERROR("connMgr StartRpcService Fail");
+    auto ret = LLBC_LoggerMgrSingleton->Initialize(log_conf_path);
+    if (ret == LLBC_FAILED) {
+        LLOG_ERROR("Initialize logger failed|path:%s|error:%s", log_conf_path,
+                   llbc::LLBC_FormatLastError());
         return LLBC_FAILED;
     }
     return LLBC_OK;
+}
+
+int RpcServer::Listen(const char *ip, int port) {
+    if (!initialized_) {
+        std::cout << "RpcServer not initialized.\n";
+        return LLBC_FAILED;
+    }
+    if (!stop_) {
+        std::cout << "RpcServer is already listening.\n";
+        return LLBC_FAILED;
+    }
+    LLOG_TRACE("Hello Server!");
+    stop_ = false;
+
+    // init rpc connection manager
+    RpcConnMgr *connMgr = &RpcConnMgr::GetInst();
+    connMgr->Init();
+    // init rpc service manager
+    RpcServiceMgr *serviceMgr = &RpcServiceMgr::GetInst();
+    serviceMgr->Init(connMgr);
+    // start rpc connection manager and listen on ip:port
+    if (connMgr->StartRpcService(ip, port) != LLBC_OK) {
+        LLOG_ERROR("connMgr StartRpcService Fail");
+        Stop();
+        return LLBC_FAILED;
+    }
+    return LLBC_OK;
+}
+
+void RpcServer::Stop() {
+    if (stop_) {
+        std::cout << "RpcServer already stopped.\n";
+        return;
+    }
+    initialized_ = false;
+    stop_ = true;
+    llbc::LLBC_Cleanup();
+    std::cout << "RpcServer stopped.\n";
 }
 
 void RpcServer::AddService(::google::protobuf::Service *service) {

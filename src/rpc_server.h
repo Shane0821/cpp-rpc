@@ -8,22 +8,23 @@ class RpcServer : public Singleton<RpcServer> {
     friend class Singleton<RpcServer>;
 
    public:
-    int Init(const char *ip, int port);
+    ~RpcServer();
 
-    void AddService(::google::protobuf::Service *);
-
-    void Stop() {
-        // TODO: implement this function
-        stop_ = true;
-    }
-
+    void Init();
+    int SetLogConfPath(const char *log_conf_path);
+    int Listen(const char *ip, int port);
+    void Stop();
     void Serve();
+
+    static void SignalHandler(int signum);
+    static void AddService(::google::protobuf::Service *service);
 
    protected:
     RpcServer() = default;
 
    private:
     bool stop_ = true;
+    bool initialized_ = false;
 };
 
 #endif  // _RPC_SERVER_H
