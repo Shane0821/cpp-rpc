@@ -46,7 +46,8 @@ void RpcChannel::CallMethod(
     const ::google::protobuf::Message *request,
     ::google::protobuf::Message *response,  // handled by coroutine context
     ::google::protobuf::Closure *done) {
-    LLOG_TRACE("CallMethod!");
+    LLOG_TRACE("CallMethod: service:%s|method: %s", method->service()->name().c_str(),
+               method->name().c_str());
 
     RpcController *rpcController = dynamic_cast<RpcController *>(controller);
     COND_RET_ELOG(rpcController == nullptr, , "controller is not RpcController");
@@ -72,5 +73,5 @@ void RpcChannel::CallMethod(
     COND_RET_ELOG(ret != LLBC_OK, , "PushPacket failed, ret: %s",
                   llbc::LLBC_FormatLastError());
 
-    LLOG_TRACE("Waiting!");
+    LLOG_TRACE("Packet sent. Waiting!");
 }
