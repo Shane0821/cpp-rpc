@@ -57,7 +57,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
     COND_RET_ELOG(it == service_methods_.end(), , "service not found|service_name:%s",
                   pkg_head.service_name.c_str());
     auto iter = it->second.find(pkg_head.method_name);
-    COND_RET_ELOG(iter == it->second.end(), , "method not found|method_name:%08X",
+    COND_RET_ELOG(iter == it->second.end(), , "method not found|method_name:%s",
                   pkg_head.method_name.c_str());
     auto *service = iter->second.service;
     const auto *md = iter->second.md;
