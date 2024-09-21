@@ -40,9 +40,6 @@ class RpcCoro {
         }
         return *this;
     }
-    ~RpcCoro() {
-        if (coro_handle_) coro_handle_.destroy();
-    }
 
     void resume() { coro_handle_.resume(); }
     auto yield() { return coro_handle_.promise().yield_value(); }
