@@ -36,7 +36,9 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     void HandleRpcRsp(llbc::LLBC_Packet &packet);
 
     // 处理 RPC 结束回调
-    void OnRpcDone(RpcController *controller, ::google::protobuf::Message *rsp);
+    void OnRpcDone(
+        RpcController *controller,
+        std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>);
 
    private:
     RpcConnMgr *conn_mgr_ = nullptr;

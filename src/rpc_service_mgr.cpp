@@ -75,8 +75,8 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
     // TODO: auto controller = objPool.Get<RpcController>();
     controller->SetPkgHead(pkg_head);
     // create call back on rpc done
-    auto done =
-        ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone, controller, rsp);
+    auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone,
+                                                controller, {req, rsp});
     service->CallMethod(md, controller, req, rsp, done);
 }
 
@@ -101,23 +101,38 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
     ctx.handle.resume();
 }
 
-void RpcServiceMgr::OnRpcDone(RpcController *controller,
-                              ::google::protobuf::Message *rsp) {
+void RpcServiceMgr::OnRpcDone(
+    RpcController *controller,
+    std::pair<::google::protobuf::Message *, ::google::protobuf::Message *> req_rsp) {
+    auto &[req, rsp] = req_rsp;
+
+    auto cleanUp = [&]() {
+        delete req;
+        delete rsp;
+        delete controller;
+    };
+
     llbc::LLBC_Packet *packet =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
-    COND_RET_ELOG(!packet, , "alloc packet from obj pool failed|pkg_head: %s|rsp: %s",
+    COND_RET_ELOG(!packet, cleanUp(),
+                  "alloc packet from obj pool failed|pkg_head:%s|req:%s|rsp:%s",
                   controller->GetPkgHead().ToString().c_str(),
-                  rsp->ShortDebugString().c_str());
+                  req->ShortDebugString().c_str(), rsp->ShortDebugString().c_str());
 
     packet->SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
     packet->SetSessionId(session_id_);
 
     int ret = controller->GetPkgHead().ToPacket(*packet);
-    COND_RET_ELOG(ret != 0, , "pkg_head.ToPacket failed|ret:%d", ret);
+    COND_RET_ELOG(ret != 0, cleanUp(), "pkg_head.ToPacket failed|ret:%d", ret);
 
-    ret = packet->Write(*rsp);
-    COND_RET_ELOG(ret != 0, , "packet.Write failed|ret:%d", ret);
+    if (controller->Failed()) {
+        packet->SetStatus(LLBC_FAILED);
+        ret = packet->Write(controller->ErrorText());
+    } else {
+        ret = packet->Write(*rsp);
+    }
+    COND_RET_ELOG(ret != 0, cleanUp(), "packet.Write failed|ret:%d", ret);
 
     conn_mgr_->SendPacket(*packet);
-    delete controller;
+    cleanUp();
 }
