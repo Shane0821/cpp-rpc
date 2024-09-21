@@ -79,6 +79,7 @@ void RpcServer::Stop() {
     }
     initialized_ = false;
     stop_ = true;
+    LLOG_TRACE("Server stopped.");
     llbc::LLBC_Cleanup();
     std::cout << "RpcServer stopped.\n";
 }
