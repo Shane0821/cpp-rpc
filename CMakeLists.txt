@@ -27,6 +27,7 @@ set(DEMO_DIR "${ROOT_DIR}/demo")
 set(TEST_DIR "${ROOT_DIR}/test")
 set(THIRD_PARTY_DIR "${ROOT_DIR}/3rd")
 set(PB_DIR "${ROOT_DIR}/proto/stub")
+set(CONFIG_DIR "${ROOT_DIR}/config")
 
 # ============================
 # Includes
@@ -46,6 +47,13 @@ link_directories(
     ${THIRD_PARTY_DIR}/protobuf/src/.libs
     ${THIRD_PARTY_DIR}/llbc/output/gmake/release64
 )
+
+# ============================
+# Files
+# ============================
+
+file(GLOB_RECURSE CONFIG_FILES ${CONFIG_DIR}/*)
+file(COPY ${CONFIG_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/config)
 
 # ============================
 # Build
