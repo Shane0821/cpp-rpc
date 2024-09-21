@@ -2,7 +2,7 @@
 #include "rpc_server.h"
 
 const char *SERVER_LLOG_CONF_PATH = "../../config/server_log.cfg";
-const char *SERVICE_NAME = "echo.EchoService.Echo";
+const char *SERVICE_NAME = "echo.EchoService.Echo";  // TODO: register to polaris
 
 int main() {
     RpcServer *server = &RpcServer::GetInst();
