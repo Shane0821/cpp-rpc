@@ -59,10 +59,18 @@ int RpcServer::Listen(const char *ip, int port) {
 
     // init rpc connection manager
     RpcConnMgr *connMgr = &RpcConnMgr::GetInst();
-    connMgr->Init();
+    if (connMgr->Init() != LLBC_OK) {
+        LLOG_ERROR("connMgr Init Fail");
+        Stop();
+        return LLBC_FAILED;
+    }
     // init rpc service manager
     RpcServiceMgr *serviceMgr = &RpcServiceMgr::GetInst();
-    serviceMgr->Init(connMgr);
+    if (serviceMgr->Init(connMgr) != LLBC_OK) {
+        LLOG_ERROR("serviceMgr Init Fail");
+        Stop();
+        return LLBC_FAILED;
+    }
     // start rpc connection manager and listen on ip:port
     if (connMgr->StartRpcService(ip, port) != LLBC_OK) {
         LLOG_ERROR("connMgr StartRpcService Fail");
