@@ -9,6 +9,7 @@ class RpcController : public ::google::protobuf::RpcController {
    public:
     RpcController() noexcept = default;
     ~RpcController() noexcept = default;
+
     virtual void Reset() {}
     virtual bool Failed() const { return isFailed_; };
     virtual std::string ErrorText() const { return errorText_; };
@@ -28,11 +29,15 @@ class RpcController : public ::google::protobuf::RpcController {
     void SetSessionId(int session_id) noexcept { session_id_ = session_id; }
     const int& GetSessionId() const noexcept { return session_id_; }
 
+    void SetCoroHandle(void* handle) noexcept { coro_handle = handle; }
+    void* GetCoroHandle() noexcept { return coro_handle; }
+
    private:
     bool isFailed_ = false;
     std::string errorText_;
     RpcChannel::PkgHead pkg_head_;
     int session_id_;
+    void* coro_handle;
 };
 
 #endif  // _RPC_CONTROLLER_H
