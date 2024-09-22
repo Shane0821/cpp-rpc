@@ -52,7 +52,7 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
     context PopCoroContext(coro_uid_type coro_uid) noexcept;
 
     // Handle coro timeout.
-    void HandleCoroTimeout();
+    void HandleCoroTimeout() noexcept;
 
     // Generate new coro uid.
     static coro_uid_type NewCoroUid() noexcept {

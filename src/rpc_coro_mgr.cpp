@@ -21,7 +21,7 @@ void RpcCoroMgr::KillCoro(context &ctx, const std::string &reason) noexcept {
     suspended_contexts_.erase(ctx.coro_uid);
 }
 
-void RpcCoroMgr::HandleCoroTimeout() {
+void RpcCoroMgr::HandleCoroTimeout() noexcept {
     llbc::sint64 now = llbc::LLBC_GetMilliseconds();
     while (!coroHeap_.empty()) {
         auto top = coroHeap_.top();
