@@ -93,9 +93,6 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
     COND_RET_ELOG(ctx.handle == nullptr, ,
                   "coro context not found|seq_id:%lu|service_name:%s|method_name:%s|",
                   coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
-    COND_RET_ELOG(ctx.rsp == nullptr, ,
-                  "coro rsp not instantiated|seq_id:%lu|service_name:%s|method_name:%s|",
-                  coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
 
     // parse response
     ret = packet.Read(*ctx.rsp);
