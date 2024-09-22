@@ -56,6 +56,7 @@ class RpcCoro {
 
 struct GetHandleAwaiter {
     bool await_ready() const noexcept { return false; }
+    
     bool await_suspend(std::coroutine_handle<RpcCoro::promise_type> handle) {
         handle_ = handle.address();
         return false;  // Immediate resumption after suspension.
