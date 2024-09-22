@@ -11,7 +11,7 @@
 
 int RpcServiceMgr::Init(RpcConnMgr *conn_mgr) noexcept {
     COND_RET_ELOG(conn_mgr_ != nullptr, LLBC_FAILED,
-                  "RpcConnMgr has already been registered|address:%p", conn_mgr_);
+                  "Init: RpcConnMgr has already been registered|address:%p", conn_mgr_);
     conn_mgr_ = conn_mgr;
     if (conn_mgr_) [[likely]] {
         conn_mgr_->Subscribe(RpcChannel::RpcOpCode::RpcReq,
@@ -42,24 +42,30 @@ bool RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
 }
 
 void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
+    // TODO: better error handling
+
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
-    COND_RET_ELOG(ret != 0, , "pkg_head.FromPacket failed|ret:%d", ret);
+    COND_RET_ELOG(ret != 0, , "HandleRpcReq: pkg_head.FromPacket failed|ret:%d", ret);
 
     auto it = service_methods_.find(pkg_head.service_name);
-    COND_RET_ELOG(it == service_methods_.end(), , "service not found|service_name:%s",
+    COND_RET_ELOG(it == service_methods_.end(), ,
+                  "HandleRpcReq: service not found|service_name:%s",
                   pkg_head.service_name.c_str());
     auto iter = it->second.find(pkg_head.method_name);
-    COND_RET_ELOG(iter == it->second.end(), , "method not found|method_name:%s",
+    COND_RET_ELOG(iter == it->second.end(), ,
+                  "HandleRpcReq: method not found|method_name:%s",
                   pkg_head.method_name.c_str());
+
     auto *service = iter->second.service;
     const auto *md = iter->second.md;
 
     // parse req
     auto *req = service->GetRequestPrototype(md).New();
-    LLOG_TRACE("packet: %s", packet.ToString().c_str());
+    LLOG_TRACE("HandleRpcReq: packet: %s", packet.ToString().c_str());
     ret = packet.Read(*req);
-    COND_RET_ELOG(ret != LLBC_OK, , "read req failed|ret:%d|reason:%s", ret,
+    COND_RET_ELOG(ret != LLBC_OK, delete req,
+                  "HandleRpcReq: read req failed|ret:%d|reason:%s", ret,
                   llbc::LLBC_FormatLastError());
     // create rsp
     auto *rsp = service->GetResponsePrototype(md).New();
@@ -68,6 +74,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
     // TODO: auto controller = objPool.Get<RpcController>();
     controller->SetSessionId(packet.GetSessionId());
     controller->SetPkgHead(pkg_head);
+
     // create call back on rpc done
     auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone,
                                                 controller, {req, rsp});
@@ -77,25 +84,35 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
 void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
-    COND_RET_ELOG(ret != LLBC_OK, , "pkg_head.FromPacket failed|ret:%d", ret);
-    LLOG_DEBUG("pkg_head info|%s", pkg_head.ToString().c_str());
+    COND_RET_ELOG(ret != LLBC_OK, , "HandleRpcRsp: pkg_head.FromPacket failed|ret:%d",
+                  ret);
+    LLOG_DEBUG("HandleRpcRsp: pkg_head info|%s", pkg_head.ToString().c_str());
 
     auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
     auto ctx = RpcCoroMgr::GetInst().PopCoroContext(coro_uid);
+
     // possibly due to timeout
-    COND_RET_ELOG(ctx.handle == nullptr, ,
-                  "coro context not found|seq_id:%lu|service_name:%s|method_name:%s|",
-                  coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
+    COND_RET_ELOG(
+        ctx.handle == nullptr, ,
+        "HandleRpcRsp: coro context not found|seq_id:%lu|service_name:%s|method_name:%s|",
+        coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
 
-    // parse response
+    // failed due to other reasons
+    if (ctx.controller->Failed()) {
+        ctx.handle.resume();
+        return;
+    }
+
+    // success
     ret = packet.Read(*ctx.rsp);
-    COND_RET_ELOG(ret != LLBC_OK, , "read rsp failed|ret:%d", ret);
-
-    LLOG_INFO("received rsp|address:%p|info:%s|sesson_id:%d", ctx.rsp,
+    COND_RET_ELOG(ret != LLBC_OK, RpcCoroMgr::GetInst().KillCoro(ctx, "read rsp failed"),
+                  "HandleRpcRsp: read rsp failed|ret:%d", ret);
+    LLOG_INFO("HandleRpcRsp: received rsp|address:%p|info:%s|sesson_id:%d", ctx.rsp,
               ctx.rsp->DebugString().c_str(), ctx.session_id);
 
     ctx.handle.resume();
-    LLOG_INFO("coro is done|%u", ctx.handle.done());
+
+    LLOG_INFO("HandleRpcRsp: coro is done|%u", ctx.handle.done());
 }
 
 void RpcServiceMgr::OnRpcDone(
@@ -112,25 +129,27 @@ void RpcServiceMgr::OnRpcDone(
 
     llbc::LLBC_Packet *packet =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
-    COND_RET_ELOG(!packet, cleanUp(),
-                  "alloc packet from obj pool failed|pkg_head:%s|req:%s|rsp:%s",
-                  controller->GetPkgHead().ToString().c_str(),
-                  req->ShortDebugString().c_str(), rsp->ShortDebugString().c_str());
+    COND_RET_ELOG(
+        !packet, cleanUp(),
+        "OnRpcDone: alloc packet from obj pool failed|pkg_head: %s|req: %s|rsp: %s",
+        controller->GetPkgHead().ToString().c_str(),
+        req ? req->ShortDebugString().c_str() : "",
+        rsp ? rsp->ShortDebugString().c_str() : "");
 
     packet->SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
     packet->SetSessionId(controller->GetSessionId());
 
     int ret = controller->GetPkgHead().ToPacket(*packet);
-    COND_RET_ELOG(ret != 0, cleanUp(), "pkg_head.ToPacket failed|ret:%d", ret);
+    COND_RET_ELOG(ret != 0, cleanUp(), "OnRpcDone: pkg_head.ToPacket failed|ret:%d", ret);
 
     if (controller->Failed()) {
         packet->SetStatus(LLBC_FAILED);
-        google::protobuf::TextFormat::ParseFromString(controller->ErrorText(), rsp);
+        packet->Write(controller->ErrorText());
+    } else {
+        ret = packet->Write(*rsp);
     }
 
-    ret = packet->Write(*rsp);
-
-    COND_RET_ELOG(ret != 0, cleanUp(), "packet.Write failed|ret:%d", ret);
+    COND_RET_ELOG(ret != 0, cleanUp(), "OnRpcDone: packet.Write failed|ret:%d", ret);
 
     conn_mgr_->SendPacket(*packet);
     cleanUp();
