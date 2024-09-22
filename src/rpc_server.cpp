@@ -14,7 +14,7 @@ RpcServer::~RpcServer() {
 }
 
 void RpcServer::SignalHandler(int signum) {
-    std::cout << "Interrupt signal (" << signum << ") received.\n";
+    std::cout << "SignalHandler: interrupt signal (" << signum << ") received.\n";
     RpcServer::GetInst().Stop();
 }
 
@@ -38,8 +38,8 @@ int RpcServer::SetLogConfPath(const char *log_conf_path) {
     }
     auto ret = LLBC_LoggerMgrSingleton->Initialize(log_conf_path);
     if (ret == LLBC_FAILED) {
-        LLOG_ERROR("Initialize logger failed|path:%s|error:%s", log_conf_path,
-                   llbc::LLBC_FormatLastError());
+        LLOG_ERROR("SetLogConfPath: initialize logger failed|path: %s|error: %s",
+                   log_conf_path, llbc::LLBC_FormatLastError());
         return LLBC_FAILED;
     }
     return LLBC_OK;
@@ -60,20 +60,20 @@ int RpcServer::Listen(const char *ip, int port) {
     // init rpc connection manager
     RpcConnMgr *connMgr = &RpcConnMgr::GetInst();
     if (connMgr->Init() != LLBC_OK) {
-        LLOG_ERROR("connMgr Init Fail");
+        LLOG_ERROR("Listen: connMgr Init Fail");
         Stop();
         return LLBC_FAILED;
     }
     // init rpc service manager
     RpcServiceMgr *serviceMgr = &RpcServiceMgr::GetInst();
     if (serviceMgr->Init(connMgr) != LLBC_OK) {
-        LLOG_ERROR("serviceMgr Init Fail");
+        LLOG_ERROR("Listen: serviceMgr Init Fail");
         Stop();
         return LLBC_FAILED;
     }
     // start rpc connection manager and listen on ip:port
     if (connMgr->StartRpcService(ip, port) != LLBC_OK) {
-        LLOG_ERROR("connMgr StartRpcService Fail");
+        LLOG_ERROR("Listen: connMgr StartRpcService Fail");
         Stop();
         return LLBC_FAILED;
     }
