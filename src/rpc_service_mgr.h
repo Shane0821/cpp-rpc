@@ -24,28 +24,27 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     virtual ~RpcServiceMgr();
 
     int Init(RpcConnMgr *conn_mgr) noexcept;
+
+    // add an user implemented service
     bool AddService(::google::protobuf::Service *service) noexcept;
-    bool RegisterChannel(const char *ip, int32_t port) noexcept;
 
    protected:
     RpcServiceMgr() = default;
 
-   private:
-    // 处理 RPC 请求和返回包
-    void HandleRpcReq(llbc::LLBC_Packet &packet);
-    void HandleRpcRsp(llbc::LLBC_Packet &packet);
+    // handle rpc request packet
+    virtual void HandleRpcReq(llbc::LLBC_Packet &packet) noexcept;
+    // handle rpc response packet
+    virtual void HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept;
 
-    // 处理 RPC 结束回调
+   private:
+    // called on rpc request done
     void OnRpcDone(
         RpcController *controller,
-        std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>);
+        std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>) noexcept;
 
-   private:
     RpcConnMgr *conn_mgr_ = nullptr;
-
-    std::vector<RpcChannel *> channels_;
     std::unordered_map<std::string, std::unordered_map<std::string, ServiceInfo>>
-        service_methods_;
+        service_methods_;  // service_name -> method_name -> service_info
 };  // RpcServiceMgr
 
 #endif  // _RPC_SERVICE_MGR_H_

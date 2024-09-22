@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     // 协程方案, 在新协程中 call rpc
     ret = RpcServiceMgr::GetInst().Init(&RpcConnMgr::GetInst());
     COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
-    RpcServiceMgr::GetInst().RegisterChannel("127.0.0.1", 6688);
+    // RpcServiceMgr::GetInst().RegisterChannel("127.0.0.1", 6688);
 
     mainloop();
 

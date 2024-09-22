@@ -41,14 +41,7 @@ bool RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
     return true;
 }
 
-bool RpcServiceMgr::RegisterChannel(const char *ip, int32_t port) noexcept {
-    auto *channel = conn_mgr_->CreateRpcChannel(ip, port);
-    COND_RET_ELOG(!channel, false, "create rpc channel failed");
-    channels_.emplace_back(channel);
-    return true;
-}
-
-void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
+void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
     COND_RET_ELOG(ret != 0, , "pkg_head.FromPacket failed|ret:%d", ret);
@@ -81,7 +74,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) {
     service->CallMethod(md, controller, req, rsp, done);
 }
 
-void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
+void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
     COND_RET_ELOG(ret != LLBC_OK, , "pkg_head.FromPacket failed|ret:%d", ret);
@@ -107,7 +100,8 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) {
 
 void RpcServiceMgr::OnRpcDone(
     RpcController *controller,
-    std::pair<::google::protobuf::Message *, ::google::protobuf::Message *> req_rsp) {
+    std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>
+        req_rsp) noexcept {
     auto &[req, rsp] = req_rsp;
 
     auto cleanUp = [&]() {
