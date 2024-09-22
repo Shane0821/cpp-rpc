@@ -55,7 +55,7 @@ RpcChannel *RpcConnMgr::CreateRpcChannel(const char *ip, int port) {
 }
 
 int RpcConnMgr::CloseSession(int sessionId) {
-    LLOG_TRACE("CloseSession, %d", sessionId);
+    LLOG_TRACE("CloseSession: %d", sessionId);
     return svc_->RemoveSession(sessionId);
 }
 
@@ -63,6 +63,10 @@ void RpcConnMgr::Tick() noexcept {
     svc_->OnSvc(true);
     llbc::LLBC_Packet *packet =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+    if (!packet) {
+        LLOG_ERROR("Acquire packet from ojbect pool failed");
+        return;
+    }
     while (RecvPacket(*packet) == LLBC_OK) {
         LLOG_TRACE("Tick");
         auto it = packet_delegs_.find(packet->GetOpcode());
