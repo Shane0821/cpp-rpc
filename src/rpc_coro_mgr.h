@@ -36,31 +36,41 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
 
     virtual ~RpcCoroMgr() = default;
 
+    // Add coro context to map and timeout heap.
     bool AddCoroContext(context ctx) noexcept;
 
+    // Kill a coro by coro_uid
     void KillCoro(coro_uid_type coro_uid, const std::string &reason) noexcept;
 
+    // Kill a coro by context
     void KillCoro(context &ctx, const std::string &reason) noexcept;
 
+    /**
+     * Pop coro context by coro_uid.
+     * @note This method does not erase the context from timeout heap.
+     */
     context PopCoroContext(coro_uid_type coro_uid) noexcept;
 
+    // Handle coro timeout.
     void HandleCoroTimeout();
 
+    // Generate new coro uid.
     static coro_uid_type NewCoroUid() noexcept {
         return ++coro_uid_generator_ == 0UL ? ++coro_uid_generator_ : coro_uid_generator_;
     }
 
-    static constexpr int CORO_TIME_OUT = 10000;  // 10s
+    static constexpr int CORO_TIME_OUT = 10000;  // coro timeout time, 10s
 
    protected:
     RpcCoroMgr() = default;
 
    private:
-    std::unordered_map<coro_uid_type, context> suspended_contexts_;
-    llbc::LLBC_Heap<context, std::vector<context>, contextCmp> coroHeap_;
-    // coro_uid generator, which should generate unique id without `0`.
-    static coro_uid_type coro_uid_generator_;
-    bool use_coro_ = false;
+    std::unordered_map<coro_uid_type, context>
+        suspended_contexts_;  // suspended coro contextss
+    llbc::LLBC_Heap<context, std::vector<context>, contextCmp> coroHeap_;  // timeout heap
+
+    static coro_uid_type coro_uid_generator_;  // coro_uid generator, which should
+                                               // generate unique id without `0`.
 };
 
 #endif  // _RPC_CORO_MGR_H_
