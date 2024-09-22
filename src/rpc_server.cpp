@@ -93,8 +93,9 @@ void RpcServer::Stop() {
 }
 
 void RpcServer::AddService(::google::protobuf::Service *service) {
-    RpcServiceMgr *serviceMgr = &RpcServiceMgr::GetInst();
-    serviceMgr->AddService(service);
+    if (!RpcServiceMgr::GetInst().AddService(service)) {
+        LLOG_ERROR("AddService: add service failed");
+    }
 }
 
 void RpcServer::Serve() {
