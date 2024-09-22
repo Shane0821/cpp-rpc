@@ -2,6 +2,8 @@
 
 #include "rpc_conn_mgr.h"
 #include "rpc_controller.h"
+#include "rpc_coro.h"
+#include "rpc_coro_mgr.h"
 #include "rpc_macros.h"
 
 RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
@@ -52,26 +54,49 @@ void RpcChannel::CallMethod(
     RpcController *rpcController = dynamic_cast<RpcController *>(controller);
     COND_RET_ELOG(rpcController == nullptr, , "controller is not RpcController");
 
+    // store coroutine context
+    auto seq = RpcCoroMgr::NewCoroUid();
+    RpcCoroMgr::GetInst().AddCoroContext({
+        .session_id =
+            rpcController->GetSessionId(),  // TODO: check whether to use this->sessionId_
+        .coro_uid = seq,
+        .timeout_time = llbc::LLBC_GetMilliseconds() + RpcCoroMgr::CORO_TIME_OUT,
+        .handle = std::coroutine_handle<RpcCoro::promise_type>::from_address(
+            rpcController->GetCoroHandle()),
+        .rsp = response,
+        .controller = rpcController,
+    });
+
     llbc::LLBC_Packet *sendPacket =
         llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
-    sendPacket->SetHeader(sessionId_, RpcOpCode::RpcReq, 0);
+    COND_RET_ELOG(sendPacket == nullptr,
+                  RpcCoroMgr::GetInst().KillCoro(seq, "Acquire LLBC_Packet failed"),
+                  "Acquire LLBC_Packet failed");
 
+    sendPacket->SetHeader(sessionId_, RpcOpCode::RpcReq, 0);
     // set pkg_head
     RpcChannel::PkgHead &pkgHead = rpcController->GetPkgHead();
     pkgHead.service_name = method->service()->name();
     pkgHead.method_name = method->name();
+    pkgHead.seq = seq;
 
     int ret = pkgHead.ToPacket(*sendPacket);
-    COND_RET_ELOG(ret != LLBC_OK, , "pkg_head.ToPacket failed|ret:%d", ret);
+    COND_RET_ELOG(ret != LLBC_OK,
+                  RpcCoroMgr::GetInst().KillCoro(seq, "pkg_head.ToPacket failed"),
+                  "pkg_head.ToPacket failed|ret:%d", ret);
+
     ret = sendPacket->Write(*request);
-    COND_RET_ELOG(ret != LLBC_OK, , "packet.Write message failed|ret:%d", ret);
+    COND_RET_ELOG(ret != LLBC_OK,
+                  RpcCoroMgr::GetInst().KillCoro(seq, "packet.Write message failed"),
+                  "packet.Write message failed|ret:%d", ret);
     LLOG_DEBUG("send data|message: %s|packet: %s", request->ShortDebugString().c_str(),
                sendPacket->ToString().c_str());
 
     // send packet via conn_mgr
     ret = RpcConnMgr::GetInst().SendPacket(*sendPacket);
-    COND_RET_ELOG(ret != LLBC_OK, , "PushPacket failed, ret: %s",
-                  llbc::LLBC_FormatLastError());
+    COND_RET_ELOG(ret != LLBC_OK,
+                  RpcCoroMgr::GetInst().KillCoro(seq, "SendPacket failed"),
+                  "SendPacket failed, ret: %s", llbc::LLBC_FormatLastError());
 
     LLOG_TRACE("Packet sent. Waiting!");
 }
