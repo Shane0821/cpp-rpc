@@ -8,6 +8,10 @@
 
 class RpcCoro {
    public:
+    struct promise_type;
+
+    using handle_type = std::coroutine_handle<promise_type>;
+
     struct promise_type {
         auto get_return_object() noexcept {
             return RpcCoro{handle_type::from_promise(*this)};
@@ -24,8 +28,6 @@ class RpcCoro {
         void return_void() noexcept {}
         auto yield_value() noexcept { return std::suspend_always{}; }
     };
-
-    using handle_type = std::coroutine_handle<promise_type>;
 
     explicit RpcCoro(handle_type h) : coro_handle_(h) {}
     RpcCoro(RpcCoro const&) = delete;
@@ -50,6 +52,18 @@ class RpcCoro {
 
    private:
     handle_type coro_handle_;
+};
+
+struct GetHandleAwaiter {
+    bool await_ready() const noexcept { return false; }
+    bool await_suspend(std::coroutine_handle<RpcCoro::promise_type> handle) {
+        handle_ = handle.address();
+        return false;  // Immediate resumption after suspension.
+    }
+
+    void* await_resume() noexcept { return handle_; }
+
+    void* handle_;
 };
 
 #endif  // _RPC_CORO_H_
