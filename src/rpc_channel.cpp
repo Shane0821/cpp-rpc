@@ -56,11 +56,12 @@ void RpcChannel::CallMethod(
     COND_RET_ELOG(rpcController == nullptr, ,
                   "CallMethod: controller is not RpcController");
 
-    // store coroutine context
     auto seq = RpcCoroMgr::NewCoroUid();
+
+    // store coroutine context
     RpcCoroMgr::GetInst().AddCoroContext({
-        .session_id =
-            rpcController->GetSessionId(),  // TODO: check whether to use this->sessionId_
+        .session_id = rpcController->GetSessionId(),  // TODO: check whether to use
+                                                      // this->sessionId_
         .coro_uid = seq,
         .timeout_time = llbc::LLBC_GetMilliseconds() + RpcCoroMgr::CORO_TIME_OUT,
         .handle = std::coroutine_handle<RpcCoro::promise_type>::from_address(
