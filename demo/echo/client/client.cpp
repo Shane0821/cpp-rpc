@@ -3,11 +3,11 @@
 
 #include <iostream>
 
+#include "echo.pb.h"
+#include "echo_service_stub.h"
 #include "rpc_channel.h"
 #include "rpc_conn_mgr.h"
 #include "rpc_coro_mgr.h"
-#include "echo.pb.h"
-#include "echo_client_impl.h"
 #include "rpc_macros.h"
 #include "rpc_service_mgr.h"
 
