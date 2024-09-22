@@ -15,12 +15,15 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     virtual ~RpcConnMgr() noexcept;
 
     int Init() noexcept;
+
     // start rpc service and listen on ip:port
-    int StartRpcService(const char *ip, int port);
+    int StartRpcService(const char *ip, int port) noexcept;
+
     // create rpc client channel, this is used to connect to server
     RpcChannel *CreateRpcChannel(const char *ip, int port);
 
     int CloseSession(int sessionId);
+
     int GetServerSessionId() { return server_sessionId_; }
 
     // Subscribe to services' req and rsp packet handlers

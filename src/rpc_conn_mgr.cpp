@@ -29,7 +29,7 @@ int RpcConnMgr::Init() noexcept {
     return ret;
 }
 
-int RpcConnMgr::StartRpcService(const char *ip, int port) {
+int RpcConnMgr::StartRpcService(const char *ip, int port) noexcept {
     if (is_server_) {
         LLOG_ERROR("Service already started");
         return LLBC_FAILED;
@@ -46,6 +46,7 @@ int RpcConnMgr::StartRpcService(const char *ip, int port) {
 RpcChannel *RpcConnMgr::CreateRpcChannel(const char *ip, int port) {
     LLOG_TRACE("CreateRpcChannel");
 
+    // default timeout is -1, which means no timeout
     auto sessionId = svc_->Connect(ip, port);
     COND_RET_ELOG(sessionId == 0, nullptr, "Create session failed, reason: %s",
                   llbc::LLBC_FormatLastError());
