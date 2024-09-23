@@ -27,7 +27,7 @@ int RpcClient::SetLogConfPath(const char *log_conf_path) {
     return LLBC_OK;
 }
 
-int RpcClient::Init() {
+int RpcClient::Init() noexcept {
     if (initialized_) {
         std::cout << "Init: RpcClient is already initialized.\n";
         return LLBC_FAILED;
@@ -36,10 +36,24 @@ int RpcClient::Init() {
     // register signal SIGINT and signal handler
     signal(SIGINT, SignalHandler);
 
-    // init llbc library
-    llbc::LLBC_Startup();
-    LLBC_Defer(llbc::LLBC_Cleanup());
+    if (InitLLBC() == LLBC_FAILED || InitRpcLib() == LLBC_FAILED) {
+        return LLBC_FAILED;
+    }
 
+    initialized_ = true;
+    return LLBC_OK;
+}
+
+int RpcClient::InitLLBC() {
+    if (llbc::LLBC_Startup() != LLBC_OK) {
+        std::cout << "initLLBC: llbc startup failed.\n";
+        Destroy();
+        return LLBC_FAILED;
+    }
+    return LLBC_OK;
+}
+
+int RpcClient::InitRpcLib() {
     // init rpc connection manager
     RpcConnMgr *connMgr = &RpcConnMgr::GetInst();
     if (connMgr->Init() != LLBC_OK) {
@@ -56,15 +70,10 @@ int RpcClient::Init() {
         return LLBC_FAILED;
     }
 
-    initialized_ = true;
     return LLBC_OK;
 }
 
 void RpcClient::Destroy() {
-    if (!initialized_) {
-        std::cout << "RpcClient not initialized.\n";
-        return;
-    }
     llbc::LLBC_Cleanup();
     initialized_ = false;
     std::cout << "RpcClient uninitialized.\n";

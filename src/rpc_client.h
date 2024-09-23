@@ -19,7 +19,7 @@ class RpcClient {
     RpcClient() = default;
     ~RpcClient() = default;
 
-    int Init();
+    int Init() noexcept;
     void Destroy();
 
     int SetLogConfPath(const char *log_conf_path);
@@ -30,6 +30,8 @@ class RpcClient {
 
    protected:
     static void SignalHandler(int signum);
+    int InitLLBC();
+    int InitRpcLib();
 
     bool initialized_ = false;
 };
