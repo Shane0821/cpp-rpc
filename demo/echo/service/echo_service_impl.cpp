@@ -40,7 +40,7 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
     }
 
     EchoServiceStub stub(channel);
-    RpcController *inner_controller = new RpcController();
+    RpcController *inner_controller = new RpcController(true);
     inner_controller->SetCoroHandle(co_await GetHandleAwaiter{});
     co_await stub.Echo(controller, &innerReq, &innerRsp, nullptr);
 

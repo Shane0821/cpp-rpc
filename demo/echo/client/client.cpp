@@ -14,7 +14,7 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcController *cntl = new RpcController();
+        RpcController *cntl = new RpcController(true);
         cntl->SetCoroHandle(co_await GetHandleAwaiter{});
         RpcChannel *channel =
             RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.Echo"].ip,

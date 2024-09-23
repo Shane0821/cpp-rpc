@@ -7,7 +7,8 @@
 
 class RpcController : public ::google::protobuf::RpcController {
    public:
-    RpcController() noexcept = default;
+    RpcController() = delete;
+    RpcController(bool use_coro) noexcept : use_coro_(use_coro) {};
     ~RpcController() noexcept = default;
 
     virtual void Reset() {}
@@ -33,7 +34,6 @@ class RpcController : public ::google::protobuf::RpcController {
     void* GetCoroHandle() noexcept { return coro_handle; }
 
     bool UseCoro() const noexcept { return use_coro_; }
-    void SetUseCoro(bool use_coro) noexcept { use_coro_ = use_coro; }
 
    private:
     bool isFailed_ = false;

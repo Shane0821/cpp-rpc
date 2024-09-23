@@ -77,7 +77,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
     // create rsp
     auto *rsp = service->GetResponsePrototype(md).New();
 
-    auto controller = new RpcController();
+    auto controller = new RpcController(true);
     // TODO: auto controller = objPool.Get<RpcController>();
     controller->SetSessionID(packet.GetSessionId());
     controller->SetPkgHead(pkg_head);
