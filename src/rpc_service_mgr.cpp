@@ -108,7 +108,7 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
     COND_RET_ELOG(ret != LLBC_OK, RpcCoroMgr::GetInst().KillCoro(ctx, "read rsp failed"),
                   "HandleRpcRsp: read rsp failed|ret:%d", ret);
     LLOG_INFO("HandleRpcRsp: received rsp|address:%p|info:%s|sesson_id:%d", ctx.rsp,
-              ctx.rsp->DebugString().c_str(), ctx.session_id);
+              ctx.rsp->DebugString().c_str(), packet.GetSessionId());
 
     ctx.handle.resume();
 

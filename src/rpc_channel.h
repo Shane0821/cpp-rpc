@@ -39,8 +39,8 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
         const std::string &ToString() const noexcept;
     };
 
-    RpcChannel(RpcConnMgr *connMgr, int sessionId)
-        : connMgr_(connMgr), sessionId_(sessionId) {}
+    RpcChannel(RpcConnMgr *conn_mgr, int session_ID)
+        : conn_mgr_(conn_mgr), session_ID_(session_ID) {}
     virtual ~RpcChannel();
 
     virtual void CallMethod(const ::google::protobuf::MethodDescriptor *method,
@@ -52,8 +52,8 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
     static constexpr std::size_t MAX_BUFFER_SIZE = 1024UL;
 
    private:
-    RpcConnMgr *connMgr_ = nullptr;
-    int sessionId_ = 0;
+    RpcConnMgr *conn_mgr_ = nullptr;
+    int session_ID_ = 0;
 };
 
 #endif  // _RPC_CHANNEL_H

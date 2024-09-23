@@ -6,7 +6,7 @@
 #include "rpc_coro_mgr.h"
 #include "rpc_macros.h"
 
-RpcChannel::~RpcChannel() { connMgr_->CloseSession(sessionId_); }
+RpcChannel::~RpcChannel() { conn_mgr_->CloseSession(session_ID_); }
 
 int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) noexcept {
     int ret = packet.Read(seq);
@@ -60,8 +60,6 @@ void RpcChannel::CallMethod(
 
     // store coroutine context
     RpcCoroMgr::GetInst().AddCoroContext({
-        .session_id = rpcController->GetSessionId(),  // TODO: check whether to use
-                                                      // this->sessionId_
         .coro_uid = seq,
         .timeout_time = llbc::LLBC_GetMilliseconds() + RpcCoroMgr::CORO_TIME_OUT,
         .handle = std::coroutine_handle<RpcCoro::promise_type>::from_address(
@@ -76,7 +74,7 @@ void RpcChannel::CallMethod(
                   RpcCoroMgr::GetInst().KillCoro(seq, "Acquire LLBC_Packet failed"),
                   "CallMethod: acquire LLBC_Packet failed");
 
-    sendPacket->SetHeader(sessionId_, RpcOpCode::RpcReq, LLBC_OK);
+    sendPacket->SetHeader(session_ID_, RpcOpCode::RpcReq, LLBC_OK);
     // set pkg_head
     RpcChannel::PkgHead &pkgHead = rpcController->GetPkgHead();
     pkgHead.service_name = method->service()->name();

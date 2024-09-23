@@ -20,7 +20,6 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
     using coro_uid_type = std::uint64_t;
 
     struct context {
-        int session_id = 0;
         coro_uid_type coro_uid = 0UL;
         llbc::sint64 timeout_time;
         std::coroutine_handle<RpcCoro::promise_type> handle = nullptr;
