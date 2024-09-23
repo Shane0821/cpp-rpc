@@ -50,11 +50,7 @@ void RpcConnComp::OnUpdate() {
 
 void RpcConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) noexcept {
     LLOG_TRACE("OnRecvPacket: %s", packet.ToString().c_str());
-    llbc::LLBC_Packet *recvPacket =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
-    recvPacket->SetHeader(packet.GetSessionId(), packet.GetOpcode(), 0);
-    recvPacket->SetPayload(packet.DetachPayload());
-    recvQueue_.emplace(*recvPacket);
+    recvQueue_.emplace(packet);
 }
 
 int RpcConnComp::PushSendPacket(llbc::LLBC_Packet &sendPacket) noexcept {
