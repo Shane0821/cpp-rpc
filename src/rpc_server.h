@@ -4,6 +4,8 @@
 #include <google/protobuf/service.h>
 #include <singleton.h>
 
+#include "rpc_client.h"
+
 class RpcChannel;
 
 /**
@@ -14,14 +16,14 @@ class RpcChannel;
  * You can also call AddService() to add  service implementation to the server. \\
  * Finally, you can call Serve() to start serving requests. \\
  */
-class RpcServer : public Singleton<RpcServer> {
+class RpcServer : public RpcClient, public Singleton<RpcServer> {
     friend class Singleton<RpcServer>;
 
    public:
     ~RpcServer();
 
-    void Init();
-    int SetLogConfPath(const char *log_conf_path);
+    int Init() noexcept;
+
     RpcChannel *RegisterRpcChannel(const char *ip, int port);
     int Listen(const char *ip, int port);
     void Stop();
@@ -34,9 +36,7 @@ class RpcServer : public Singleton<RpcServer> {
 
     static void SignalHandler(int signum);
 
-   private:
     bool stop_ = true;
-    bool initialized_ = false;
 };
 
 #endif  // _RPC_SERVER_H
