@@ -56,6 +56,11 @@ void RpcChannel::CallMethod(
     COND_RET_ELOG(rpcController == nullptr, ,
                   "CallMethod: controller is not RpcController");
 
+    if (!rpcController->UseCoro()) {
+        BlockingCallMethod(method, rpcController, request, response);
+        return;
+    }
+
     auto seq = RpcCoroMgr::NewCoroUid();
 
     // store coroutine context
@@ -99,6 +104,69 @@ void RpcChannel::CallMethod(
     COND_RET_ELOG(ret != LLBC_OK,
                   RpcCoroMgr::GetInst().KillCoro(seq, "sendPacket failed"),
                   "CallMethod: sendPacket failed, ret: %s", llbc::LLBC_FormatLastError());
+    LLOG_TRACE("Packet sent. Waiting!");
+}
+
+void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *method,
+                                    RpcController *controller,
+                                    const ::google::protobuf::Message *request,
+                                    ::google::protobuf::Message *response) {
+    llbc::LLBC_Packet *sendPacket =
+        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+    COND_RET_ELOG(sendPacket == nullptr,
+                  controller->SetFailed("acquire LLBC_Packet failed"),
+                  "CallMethod: acquire LLBC_Packet failed");
+
+    sendPacket->SetHeader(session_ID_, RpcOpCode::RpcReq, LLBC_OK);
+
+    // set pkg_head
+    RpcChannel::PkgHead pkgHead;
+    pkgHead.service_name = method->service()->name();
+    pkgHead.method_name = method->name();
+    pkgHead.seq = 0;
+
+    int ret = pkgHead.ToPacket(*sendPacket);
+    COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("pkg_head.ToPacket failed"),
+                  "CallMethod: pkg_head.ToPacket failed|ret: %d", ret);
+
+    ret = sendPacket->Write(*request);
+    COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("packet.Write message failed"),
+                  "CallMethod: packet.Write message failed|ret: %d", ret);
+
+    LLOG_DEBUG("CallMethod: send data|message: %s|packet: %s",
+               request->ShortDebugString().c_str(), sendPacket->ToString().c_str());
+    // send packet via conn_mgr
+    ret = RpcConnMgr::GetInst().SendPacket(*sendPacket);
+    COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("sendPacket failed"),
+                  "CallMethod: sendPacket failed, ret: %s", llbc::LLBC_FormatLastError());
 
     LLOG_TRACE("Packet sent. Waiting!");
+
+    auto recvPacket = sendPacket;
+    int count = 0;
+    while (!conn_mgr_->RecvPacket(*recvPacket) && count < RpcCoroMgr::CORO_TIME_OUT) {
+        llbc::LLBC_Sleep(1);
+        ++count;
+    }
+
+    if (!recvPacket) {
+        response->Clear();
+        LLOG_ERROR("BlockingCallMethod: receive packet timeout!");
+        controller->SetFailed("receive packet timeout");
+    }
+
+    LLOG_TRACE("BlockingCallMethod: payload info|length:%lu|info: %s",
+               recvPacket->GetPayloadLength(), recvPacket->ToString().c_str());
+
+    PkgHead pkg_head;
+    auto ret = pkg_head.FromPacket(*recvPacket);
+    COND_RET_ELOG(ret != LLBC_OK, , "BlockingCallMethod: parse net packet failed|ret:%d",
+                  ret);
+    ret = recvPacket->Read(*response);
+    COND_RET_ELOG(ret != LLBC_OK, , "BlockingCallMethod: read recv_packet failed|ret:%d",
+                  ret);
+
+    LLOG_TRACE("BlockingCallMethod: recved: %s|extdata:%lu",
+               response->ShortDebugString().c_str(), pkg_head.seq);
+    LLBC_Recycle(sendPacket);
 }

@@ -49,6 +49,11 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
                             ::google::protobuf::Message *response,
                             ::google::protobuf::Closure *done) override;
 
+    void BlockingCallMethod(const ::google::protobuf::MethodDescriptor *method,
+                            RpcController *controller,
+                            const ::google::protobuf::Message *request,
+                            ::google::protobuf::Message *response);
+
     static constexpr std::size_t MAX_BUFFER_SIZE = 1024UL;
 
    private:
