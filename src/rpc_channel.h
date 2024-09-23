@@ -44,12 +44,16 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
         : conn_mgr_(conn_mgr), session_ID_(session_ID) {}
     virtual ~RpcChannel();
 
+    // This only sends the request to the remote server.
+    // caller should await the response in the coroutine
     virtual void CallMethod(const ::google::protobuf::MethodDescriptor *method,
                             ::google::protobuf::RpcController *controller,
                             const ::google::protobuf::Message *request,
                             ::google::protobuf::Message *response,
-                            ::google::protobuf::Closure *done) override;
+                            ::google::protobuf::Closure *) override;
 
+    // This is the blocking version of CallMethod
+    // it will block the current coroutine until the response is received
     void BlockingCallMethod(const ::google::protobuf::MethodDescriptor *method,
                             RpcController *controller,
                             const ::google::protobuf::Message *request,
