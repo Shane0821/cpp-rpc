@@ -47,15 +47,16 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
     co_await stub.Echo(controller, &innerReq, &innerRsp, nullptr);
 
     LLOG_INFO(
-        "Recv rsp. status:%s, rsp:%s\n",
+        "InnerCallEcho: recv rsp. status:%s, rsp:%s\n",
         inner_controller->Failed() ? inner_controller->ErrorText().c_str() : "success",
         innerRsp.msg().c_str());
+
     if (inner_controller->Failed()) {
         controller->SetFailed(inner_controller->ErrorText());
     }
 
-    // delete channel;
     rsp->set_msg(innerRsp.msg());
+
     done->Run();
     delete inner_controller;
     co_return;
