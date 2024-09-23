@@ -144,10 +144,9 @@ void RpcServiceMgr::OnRpcDone(
 
     if (controller->Failed()) {
         packet->SetStatus(LLBC_FAILED);
-        packet->Write(controller->ErrorText());
-    } else {
-        ret = packet->Write(*rsp);
     }
+
+    ret = packet->Write(*rsp);
 
     COND_RET_ELOG(ret != 0, cleanUp(), "OnRpcDone: packet.Write failed|ret:%d", ret);
 
