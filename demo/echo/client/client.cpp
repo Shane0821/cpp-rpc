@@ -1,72 +1,46 @@
-#include <llbc.h>
-#include <signal.h>
-
-#include <iostream>
-
 #include "echo.pb.h"
 #include "echo_service_stub.h"
-#include "rpc_channel.h"
-#include "rpc_conn_mgr.h"
-#include "rpc_coro_mgr.h"
-#include "rpc_macros.h"
-#include "rpc_service_mgr.h"
+#include "polaris.h"
+#include "rpc_client.h"
+#include "rpc_controller.h"
 
-bool stop = false;
-static const std::string CLIENT_LLOG_CONF_PATH =
-    "../../config/client_log.cfg";  // change path
+const char *CLIENT_LLOG_CONF_PATH = "../../config/client_log.cfg";
+const char *SERVICE_NAME = "echo.EchoService.Echo";
 
-void signalHandler(int signum) {
-    std::cout << "INTERRUPT SIGNAL [" << signum << "] received.\n";
-    stop = true;
-}
+class EchoClient : public RpcClient {
+   public:
+    virtual RpcCoro CallMethod() override {
+        // create rpc req & resp
+        echo::EchoRequest req;
+        echo::EchoResponse rsp;
 
-void mainloop() {
-    // 创建 rpc req & resp
-    echo::EchoRequest req;
-    echo::EchoResponse rsp;
+        RpcController *cntl = new RpcController();
+        cntl->SetCoroHandle(co_await GetHandleAwaiter{});
+        RpcChannel *channel =
+            RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.Echo"].ip,
+                               polaris::NameRegistry["echo.EchoService.Echo"].port);
+        EchoServiceStub stub(channel);
 
-    while (!stop) {
-        std::string input;
-        COND_EXP(!(std::cin >> input), break);  // 手动阻塞
-        COND_EXP(input == "exit", break);
-        // req.set_msg(input);
-        // auto ret = echo::   ::DemoServiceStub::Echo(0UL, req, &rsp);
-        // COND_EXP_ELOG(ret != 0, continue, "call Stub::method failed|ret:%d", ret);
+        req.set_msg("Hello, Echo.");
+        LLOG_INFO("EchoClient rpc echo call: msg:%s", req.msg().c_str());
+        co_await stub.Echo(cntl, &req, &rsp, nullptr);
+        LLOG_INFO("Recv Echo Rsp, status:%s, rsp:%s",
+                  cntl->Failed() ? cntl->ErrorText().c_str() : "success",
+                  rsp.msg().c_str());
+
+        delete cntl;
+        co_return;
     }
-}
+};
 
-int main(int argc, char *argv[]) {
-    // 注册信号 SIGINT 和信号处理程序
-    ::signal(SIGINT, signalHandler);
+int main() {
+    EchoClient client;
+    client.Init();
+    client.SetLogConfPath(CLIENT_LLOG_CONF_PATH);
 
-    // 初始化 llbc 库
-    llbc::LLBC_Startup();
-    LLBC_Defer(llbc::LLBC_Cleanup());
-
-    // 初始化日志
-    auto ret = LLBC_LoggerMgrSingleton->Initialize(CLIENT_LLOG_CONF_PATH);
-    if (ret == LLBC_FAILED) {
-        // fmt::print("Initialize logger failed|path:{}|error: {}\n",
-        // CLIENT_LLOG_CONF_PATH,
-        //            llbc::LLBC_FormatLastError());
-        return EXIT_FAILURE;
-    }
-
-    // 初始化连接管理器
-    ret = RpcConnMgr::GetInst().Init();
-    COND_RET_ELOG(ret != LLBC_OK, -1, "init RpcConnMgr failed|error: %s",
-                  llbc::LLBC_FormatLastError());
-
-    // RpcCoroMgr::GetInst().UseCoro(false);  // 客户端默认不用协程，一直阻塞等待回包
-
-    // 协程方案, 在新协程中 call rpc
-    ret = RpcServiceMgr::GetInst().Init(&RpcConnMgr::GetInst());
-    COND_RET_ELOG(ret != 0, ret, "RpcServiceMgr init failed|ret:%d", ret);
-    // RpcServiceMgr::GetInst().RegisterChannel("127.0.0.1", 6688);
-
-    mainloop();
-
-    LLOG_TRACE("client stop");
+    LLOG_TRACE("CallMeathod Start");
+    client.CallMethod();
+    LLOG_TRACE("CallMeathod return");
 
     return 0;
 }
