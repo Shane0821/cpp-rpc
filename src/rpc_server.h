@@ -4,6 +4,8 @@
 #include <google/protobuf/service.h>
 #include <singleton.h>
 
+class RpcChannel;
+
 /**
  * To use this class, you must first call Init() to initialize the server. \\
  * Then, you can optionally call SetLogConfPath() to set the path of the log configuration
@@ -20,6 +22,7 @@ class RpcServer : public Singleton<RpcServer> {
 
     void Init();
     int SetLogConfPath(const char *log_conf_path);
+    RpcChannel *RegisterRpcChannel(const char *ip, int port);
     int Listen(const char *ip, int port);
     void Stop();
     void Serve();

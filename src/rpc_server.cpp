@@ -45,6 +45,14 @@ int RpcServer::SetLogConfPath(const char *log_conf_path) {
     return LLBC_OK;
 }
 
+RpcChannel *RpcServer::RegisterRpcChannel(const char *ip, int port) {
+    if (stop_) {
+        std::cout << "RpcServer not started.\n";
+        return nullptr;
+    }
+    return RpcServiceMgr::GetInst().RegisterRpcChannel(ip, port);
+}
+
 int RpcServer::Listen(const char *ip, int port) {
     if (!initialized_) {
         std::cout << "RpcServer not initialized.\n";
@@ -99,6 +107,11 @@ void RpcServer::AddService(::google::protobuf::Service *service) {
 }
 
 void RpcServer::Serve() {
+    if (stop_) {
+        std::cout << "RpcServer not started.\n";
+        return;
+    }
+
     LLOG_INFO(">>> RPC SERVER START SERVING <<<");
 
     LLOG_TRACE("START LOOP");
