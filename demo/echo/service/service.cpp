@@ -8,7 +8,7 @@ int main() {
     RpcServer *server = &RpcServer::GetInst();
     server->Init();
     server->SetLogConfPath(SERVER_LLOG_CONF_PATH);
-    server->Listen("127.0.0.1", 6688);
+    server->Listen("127.0.0.1", 6688);  // TODO: register to polaris
 
     EchoServiceImpl echoService;
     RpcServer::AddService(&echoService);
