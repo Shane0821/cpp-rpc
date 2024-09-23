@@ -75,8 +75,9 @@ void RpcChannel::CallMethod(
                   "CallMethod: acquire LLBC_Packet failed");
 
     sendPacket->SetHeader(session_ID_, RpcOpCode::RpcReq, LLBC_OK);
+
     // set pkg_head
-    RpcChannel::PkgHead &pkgHead = rpcController->GetPkgHead();
+    RpcChannel::PkgHead pkgHead;
     pkgHead.service_name = method->service()->name();
     pkgHead.method_name = method->name();
     pkgHead.seq = seq;
