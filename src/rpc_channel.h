@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 class RpcConnMgr;
+class RpcController;
 
 class RpcChannel : public ::google::protobuf::RpcChannel {
    public:
