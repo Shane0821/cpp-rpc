@@ -12,8 +12,9 @@ RpcConnMgr::~RpcConnMgr() noexcept {
 
 int RpcConnMgr::Init() noexcept {
     if (svc_) {
-        LLOG_ERROR("Service already started");
-        return LLBC_FAILED;
+        svc_->Stop();
+        delete comp_;
+        delete svc_;
     }
     // Create service
     svc_ = llbc::LLBC_Service::Create("Svc");
