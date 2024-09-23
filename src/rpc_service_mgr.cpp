@@ -41,6 +41,17 @@ bool RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
     return true;
 }
 
+RpcChannel *RpcServiceMgr::RegisterRpcChannel(const char *ip, int port) noexcept {
+    auto key = std::string(ip) + ":" + std::to_string(port);
+    auto it = channels_.find(key);
+    if (it != channels_.end()) {
+        return it->second;
+    }
+    auto *channel = conn_mgr_->CreateRpcChannel(ip, port);
+    channels_[key] = channel;
+    return channel;
+}
+
 void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);

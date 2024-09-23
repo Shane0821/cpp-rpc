@@ -28,6 +28,9 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     // add an user implemented service
     bool AddService(::google::protobuf::Service *service) noexcept;
 
+    // register rpc channel. if channel already exists, return it directly.
+    RpcChannel *RegisterRpcChannel(const char *, int port) noexcept;
+
    protected:
     RpcServiceMgr() = default;
 
@@ -45,6 +48,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     RpcConnMgr *conn_mgr_ = nullptr;
     std::unordered_map<std::string, std::unordered_map<std::string, ServiceInfo>>
         service_methods_;  // service_name -> method_name -> service_info
+    std::unordered_map<std::string, RpcChannel *> channels_;  // ip:port -> channel
 };  // RpcServiceMgr
 
 #endif  // _RPC_SERVICE_MGR_H_
