@@ -32,12 +32,16 @@ class RpcController : public ::google::protobuf::RpcController {
     void SetCoroHandle(void* handle) noexcept { coro_handle = handle; }
     void* GetCoroHandle() noexcept { return coro_handle; }
 
+    bool UseCoro() const noexcept { return use_coro_; }
+    void SetUseCoro(bool use_coro) noexcept { use_coro_ = use_coro; }
+
    private:
     bool isFailed_ = false;
     std::string errorText_;
     RpcChannel::PkgHead pkg_head_;
     int session_id_;
-    void* coro_handle;
+    void* coro_handle = nullptr;
+    bool use_coro_ = true;
 };
 
 #endif  // _RPC_CONTROLLER_H
