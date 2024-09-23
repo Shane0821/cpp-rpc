@@ -10,8 +10,6 @@
 #include "rpc_macros.h"
 
 int RpcServiceMgr::Init(RpcConnMgr *conn_mgr) noexcept {
-    COND_RET_ELOG(conn_mgr_ != nullptr, LLBC_FAILED,
-                  "Init: RpcConnMgr has already been registered|address:%p", conn_mgr_);
     conn_mgr_ = conn_mgr;
     if (conn_mgr_) [[likely]] {
         conn_mgr_->Subscribe(RpcChannel::RpcOpCode::RpcReq,
