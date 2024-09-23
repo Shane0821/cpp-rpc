@@ -5,9 +5,9 @@
 #include "echo_service_stub.h"
 #include "polaris.h"
 #include "rpc_channel.h"
-#include "rpc_conn_mgr.h"
 #include "rpc_controller.h"
 #include "rpc_coro.h"
+#include "rpc_service_mgr.h"
 
 using namespace llbc;
 
@@ -30,12 +30,10 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
     LLOG_INFO("call, msg:%s", innerReq.msg().c_str());
     echo::EchoResponse innerRsp;
 
-    // TODO: create channel in advance
-    static auto addr = polaris::NameRegistry[EchoServiceImpl::ECHO_SERVICE_NAME];
-    RpcChannel *channel = RpcConnMgr::GetInst().CreateRpcChannel(addr.ip, addr.port);
+    static auto addr = polaris::NameRegistry["echo.EchoService.Echo"];
+    RpcChannel *channel = RpcServiceMgr::GetInst().RegisterRpcChannel(addr.ip, addr.port);
     if (!channel) {
-        LLOG_ERROR("CreateRpcChannel for ReplayEcho failed.");
-        rsp->set_msg(req->msg() + " ---- inner rpc call server does not exist");
+        LLOG_ERROR("InnerCallEcho: CreateRpcChannel for ReplayEcho failed.");
         controller->SetFailed("CreateRpcChannel for ReplayEcho Fail");
         done->Run();
         co_return;
@@ -50,14 +48,11 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
         "InnerCallEcho: recv rsp. status:%s, rsp:%s\n",
         inner_controller->Failed() ? inner_controller->ErrorText().c_str() : "success",
         innerRsp.msg().c_str());
-
     if (inner_controller->Failed()) {
         controller->SetFailed(inner_controller->ErrorText());
     }
-
     delete inner_controller;
     rsp->set_msg(innerRsp.msg());
-    // NOTE: this should be called after setting response message
     done->Run();
     co_return;
 }
