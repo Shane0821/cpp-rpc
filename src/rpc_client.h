@@ -25,7 +25,6 @@ class RpcClient {
     RpcChannel *RegisterRpcChannel(const char *ip, int port);
 
     virtual RpcCoro CallMethod() { co_return; }
-    virtual RpcCoro CallMethod(RpcChannel *) { co_return; }
 
    protected:
     static void SignalHandler(int signum);
