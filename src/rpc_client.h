@@ -4,9 +4,8 @@
 #include <google/protobuf/service.h>
 #include <singleton.h>
 
+#include "rpc_channel.h"
 #include "rpc_coro.h"
-
-class RpcChannel;
 
 /**
  * To use this class, you must first call Init() to initialize the client. \\
