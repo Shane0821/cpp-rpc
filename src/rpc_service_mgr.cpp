@@ -42,8 +42,6 @@ bool RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
 }
 
 void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
-    // TODO: better error handling
-
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
     COND_RET_ELOG(ret != 0, , "HandleRpcReq: pkg_head.FromPacket failed|ret:%d", ret);
@@ -76,6 +74,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
     controller->SetPkgHead(pkg_head);
 
     // create call back on rpc done
+    // service methods should call done->run on rpc completion
     auto done = ::google::protobuf::NewCallback(this, &RpcServiceMgr::OnRpcDone,
                                                 controller, {req, rsp});
     service->CallMethod(md, controller, req, rsp, done);
@@ -84,6 +83,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
 void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
+    // this should not happen
     COND_RET_ELOG(ret != LLBC_OK, , "HandleRpcRsp: pkg_head.FromPacket failed|ret:%d",
                   ret);
     LLOG_DEBUG("HandleRpcRsp: pkg_head info|%s", pkg_head.ToString().c_str());
@@ -91,19 +91,34 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
     auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
     auto ctx = RpcCoroMgr::GetInst().PopCoroContext(coro_uid);
 
-    // possibly due to timeout
+    // the coro context is already removed, possibly due to timeout
+    // the coro is already killed
     COND_RET_ELOG(
         ctx.handle == nullptr, ,
         "HandleRpcRsp: coro context not found|seq_id:%lu|service_name:%s|method_name:%s|",
         coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
 
     // failed due to other reasons
+    if (packet.GetStatus() != LLBC_OK) {
+        ctx.controller->SetFailed("rpc failed");
+        ctx.handle.resume();
+        LLOG_INFO("HandleRpcRsp: coro is done|%u", ctx.handle.done());
+        return;
+    }
     if (ctx.controller->Failed()) {
         ctx.handle.resume();
+        LLOG_INFO("HandleRpcRsp: coro is done|%u", ctx.handle.done());
         return;
     }
 
-    // success
+    // no response, just resume the coro
+    if (!ctx.rsp) {
+        LLOG_INFO("HandleRpcRsp: ctx does have rsp");
+        ctx.handle.resume();
+        LLOG_INFO("HandleRpcRsp: coro is done|%u", ctx.handle.done());
+        return;
+    }
+
     ret = packet.Read(*ctx.rsp);
     COND_RET_ELOG(ret != LLBC_OK, RpcCoroMgr::GetInst().KillCoro(ctx, "read rsp failed"),
                   "HandleRpcRsp: read rsp failed|ret:%d", ret);
@@ -111,7 +126,6 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
               ctx.rsp->DebugString().c_str(), packet.GetSessionId());
 
     ctx.handle.resume();
-
     LLOG_INFO("HandleRpcRsp: coro is done|%u", ctx.handle.done());
 }
 
@@ -119,6 +133,8 @@ void RpcServiceMgr::OnRpcDone(
     RpcController *controller,
     std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>
         req_rsp) noexcept {
+    COND_EXP_ELOG(controller == nullptr, , "OnRpcDone: controller is nullptr");
+
     auto &[req, rsp] = req_rsp;
 
     auto cleanUp = [&]() {
@@ -147,7 +163,6 @@ void RpcServiceMgr::OnRpcDone(
     }
 
     ret = packet->Write(*rsp);
-
     COND_RET_ELOG(ret != 0, cleanUp(), "OnRpcDone: packet.Write failed|ret:%d", ret);
 
     conn_mgr_->SendPacket(*packet);
