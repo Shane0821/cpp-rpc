@@ -37,7 +37,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     virtual void HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept;
 
    private:
-    // called on rpc request done
+    // called on rpc request done, send response back
     void OnRpcDone(
         RpcController *controller,
         std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>) noexcept;
