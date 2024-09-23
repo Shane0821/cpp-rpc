@@ -72,7 +72,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
 
     auto controller = new RpcController();
     // TODO: auto controller = objPool.Get<RpcController>();
-    controller->SetSessionId(packet.GetSessionId());
+    controller->SetSessionID(packet.GetSessionId());
     controller->SetPkgHead(pkg_head);
 
     // create call back on rpc done
@@ -137,7 +137,7 @@ void RpcServiceMgr::OnRpcDone(
         rsp ? rsp->ShortDebugString().c_str() : "");
 
     packet->SetOpcode(RpcChannel::RpcOpCode::RpcRsp);
-    packet->SetSessionId(controller->GetSessionId());
+    packet->SetSessionId(controller->GetSessionID());
 
     int ret = controller->GetPkgHead().ToPacket(*packet);
     COND_RET_ELOG(ret != 0, cleanUp(), "OnRpcDone: pkg_head.ToPacket failed|ret:%d", ret);

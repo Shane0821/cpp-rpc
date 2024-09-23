@@ -26,8 +26,8 @@ class RpcController : public ::google::protobuf::RpcController {
     }
     RpcChannel::PkgHead& GetPkgHead() noexcept { return pkg_head_; }
 
-    void SetSessionId(int session_id) noexcept { session_id_ = session_id; }
-    const int& GetSessionId() const noexcept { return session_id_; }
+    void SetSessionID(int session_id) noexcept { session_id_ = session_id; }
+    const int& GetSessionID() const noexcept { return session_id_; }
 
     void SetCoroHandle(void* handle) noexcept { coro_handle = handle; }
     void* GetCoroHandle() noexcept { return coro_handle; }

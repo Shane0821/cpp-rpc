@@ -22,14 +22,14 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     // create rpc client channel, this is used to connect to server
     RpcChannel *CreateRpcChannel(const char *ip, int port);
 
-    int CloseSession(int sessionId);
+    int CloseSession(int sessionID);
 
-    int GetServerSessionId() { return server_sessionId_; }
+    int GetServerSessionID() { return server_sessionID_; }
 
     // Subscribe to services' req and rsp packet handlers
-    int Subscribe(int cmdId, const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg);
+    int Subscribe(int cmdID, const llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)> &deleg);
     // Unsubscribe handlers
-    void Unsubscribe(int cmdId);
+    void Unsubscribe(int cmdID);
 
     // add packet to send queue
     int SendPacket(llbc::LLBC_Packet &sendPacket) {
@@ -52,7 +52,7 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     llbc::LLBC_Service *svc_ = nullptr;  // llbc service
     RpcConnComp *comp_ = nullptr;        // rpc conn component
     bool is_server_ = false;             // is server or client
-    int server_sessionId_ = 0;           // server session id
+    int server_sessionID_ = 0;           // server session id
     std::unordered_map<int, llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>>
         packet_delegs_;  // {RpcOpCode : HandleReq / HandleRsp}
 };

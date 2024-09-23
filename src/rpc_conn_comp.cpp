@@ -24,7 +24,7 @@ void RpcConnComp::OnAsyncConnResult(const llbc::LLBC_AsyncConnResult &result) {
 }
 
 void RpcConnComp::OnUnHandledPacket(const llbc::LLBC_Packet &packet) {
-    LLOG_TRACE("Unhandled packet, sessionId: %d, opcode: %d, payloadLen: %ld",
+    LLOG_TRACE("Unhandled packet, sessionID: %d, opcode: %d, payloadLen: %ld",
                packet.GetSessionId(), packet.GetOpcode(), packet.GetPayloadLength());
 }
 
