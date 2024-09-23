@@ -55,10 +55,10 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
         controller->SetFailed(inner_controller->ErrorText());
     }
 
-    rsp->set_msg(innerRsp.msg());
-
-    done->Run();
     delete inner_controller;
+    rsp->set_msg(innerRsp.msg());
+    // NOTE: this should be called after setting response message
+    done->Run();
     co_return;
 }
 
