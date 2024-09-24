@@ -84,3 +84,12 @@ int RpcConnMgr::Subscribe(int cmdID,
 }
 
 void RpcConnMgr::Unsubscribe(int cmdID) { packet_delegs_.erase(cmdID); }
+
+int RpcConnMgr::BlockingRecvPacket(llbc::LLBC_Packet &recvPacket) {
+    int count = 0;
+    while (RecvPacket(recvPacket) != LLBC_OK && count < RECEIVE_TIME_OUT) {
+        llbc::LLBC_Sleep(1);
+        count++;
+    }
+    return LLBC_FAILED;
+}

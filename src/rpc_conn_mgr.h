@@ -39,11 +39,15 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     int RecvPacket(llbc::LLBC_Packet &recvPacket) {
         return comp_->PopRecvPacket(recvPacket);
     }
+    // block and wait for packet in recv queue
+    int BlockingRecvPacket(llbc::LLBC_Packet &recvPacket);
 
     // Handle rpc data packets. The main loop should call this function.
     void Tick() noexcept;
 
     bool IsServer() { return is_server_; }
+
+    static constexpr int RECEIVE_TIME_OUT = 10000;
 
    protected:
     RpcConnMgr() = default;
