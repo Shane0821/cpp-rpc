@@ -49,6 +49,8 @@ void RpcChannel::CallMethod(
     const ::google::protobuf::Message *request,
     ::google::protobuf::Message *response,  // handled by coroutine context
     ::google::protobuf::Closure *) {
+    response->Clear();
+
     LLOG_TRACE("CallMethod|service: %s|method: %s", method->service()->name().c_str(),
                method->name().c_str());
 
@@ -143,14 +145,8 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
     LLOG_TRACE("Packet sent. Waiting!");
 
     auto recvPacket = sendPacket;
-    int count = 0;
-    while (!conn_mgr_->RecvPacket(*recvPacket) && count < RpcCoroMgr::CORO_TIME_OUT) {
-        llbc::LLBC_Sleep(1);
-        ++count;
-    }
 
-    if (!recvPacket) {
-        response->Clear();
+    if (conn_mgr_->BlockingRecvPacket(*recvPacket) == LLBC_FAILED) {
         LLOG_ERROR("BlockingCallMethod: receive packet timeout!");
         controller->SetFailed("receive packet timeout");
     }
