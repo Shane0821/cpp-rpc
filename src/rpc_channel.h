@@ -44,10 +44,6 @@ class RpcChannel : public ::google::protobuf::RpcChannel {
         : conn_mgr_(conn_mgr), session_ID_(session_ID) {}
     virtual ~RpcChannel();
 
-    // This only sends the request to the remote server.
-    // caller should await the response in the coroutine.
-    // before calling, save coroutine handle in the controller and then use co_await to
-    // wait for response.
     virtual void CallMethod(const ::google::protobuf::MethodDescriptor *method,
                             ::google::protobuf::RpcController *controller,
                             const ::google::protobuf::Message *request,
