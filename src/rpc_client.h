@@ -24,7 +24,30 @@ class RpcClient {
     int SetLogConfPath(const char *log_conf_path);
     RpcChannel *RegisterRpcChannel(const char *ip, int port);
 
+    /**
+     * Call a method using coroutines.
+     * You should rewrite this method to call the remote method. Example:
+     *
+     *  RpcController *cntl = new RpcController(true);
+     *  cntl->SetCoroHandle(co_await GetHandleAwaiter{});
+     *  EchoServiceStub stub(RegisterRpcChannel(...));
+     *  co_await stub.xxx(cntl, &req, &rsp, nullptr);
+     *  handle rsp
+     *  delete cntl;
+     */
     virtual RpcCoro CallMethod() { co_return; }
+
+    /**
+     * Blocking version of CallMethod
+     * you should rewrite this method to call the remote method. Example:
+     *
+     * RpcController *cntl = new RpcController(false);
+     * EchoServiceStub stub(RegisterRpcChannel(...));
+     * stub.xxx(cntl, &req, &rsp, nullptr);
+     * handle rsp
+     * delete cntl;
+     */
+    virtual void BlockingCallMethod() {}
 
    protected:
     static void SignalHandler(int signum);
