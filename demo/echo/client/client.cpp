@@ -31,6 +31,27 @@ class EchoClient : public RpcClient {
         delete cntl;
         co_return;
     }
+
+    virtual void BlockingCallMethod() override {
+        // create rpc req & resp
+        echo::EchoRequest req;
+        echo::EchoResponse rsp;
+
+        RpcController *cntl = new RpcController(false);
+        RpcChannel *channel =
+            RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.Echo"].ip,
+                               polaris::NameRegistry["echo.EchoService.Echo"].port);
+        EchoServiceStub stub(channel);
+
+        req.set_msg("Hello, Echo.");
+        LLOG_INFO("EchoClient rpc echo call: msg:%s", req.msg().c_str());
+        stub.Echo(cntl, &req, &rsp, nullptr);
+        LLOG_INFO("Recv Echo Rsp, status:%s, rsp:%s",
+                  cntl->Failed() ? cntl->ErrorText().c_str() : "success",
+                  rsp.msg().c_str());
+
+        delete cntl;
+    }
 };
 
 int main() {
@@ -39,7 +60,7 @@ int main() {
     client.SetLogConfPath(CLIENT_LLOG_CONF_PATH);
 
     LLOG_TRACE("CallMeathod Start");
-    client.CallMethod();
+    client.BlockingCallMethod();
     LLOG_TRACE("CallMeathod return");
 
     return 0;
