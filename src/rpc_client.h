@@ -38,7 +38,8 @@ class RpcClient {
     virtual RpcCoro CallMethod() { co_return; }
 
     /**
-     * Blocking version of CallMethod
+     * Blocking version of CallMethod.
+     * a should either call CallMethod() or BlockingCallMethod(), not both.
      * you should rewrite this method to call the remote method. Example:
      *
      * RpcController *cntl = new RpcController(false);
