@@ -12,7 +12,7 @@ class SPSCQueue : private std::allocator<T> {
         data_ = std::allocator_traits<std::allocator<T>>::allocate(*this, Capacity);
     }
 
-    // non-copyable and non-movable
+    // non-copyable
     SPSCQueue(const SPSCQueue &) = delete;
     SPSCQueue &operator=(const SPSCQueue &) = delete;
 

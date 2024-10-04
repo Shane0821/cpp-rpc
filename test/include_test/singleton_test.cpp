@@ -25,6 +25,6 @@ TEST(SingletonTest, Multithread) {
     t1.join();
     t2.join();
 
-    EXPECT_EQ(SingletonTest::GetInst().a, 1);
-    EXPECT_EQ(SingletonTest::GetInst().b, 1);
+    ASSERT_EQ(SingletonTest::GetInst().a, 1);
+    ASSERT_EQ(SingletonTest::GetInst().b, 1);
 }
