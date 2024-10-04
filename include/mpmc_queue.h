@@ -8,7 +8,7 @@
 template <typename T, size_t Capacity>
 class MPMCQueue : private std::allocator<T> {
    public:
-    MPMCQueue() {
+    MPMCQueue() noexcept {
         data_ = std::allocator_traits<std::allocator<T>>::allocate(*this, Capacity);
     }
 
@@ -60,9 +60,8 @@ class MPMCQueue : private std::allocator<T> {
             }
             result = std::move(data_[h]);
             std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + h);
-        } while (!head_.compare_exchange_strong(h, (h + 1) % Capacity,
-                                                std::memory_order_release,
-                                                std::memory_order_relaxed));
+        } while (!head_.compare_exchange_strong(
+            h, (h + 1) % Capacity, std::memory_order_release, std::memory_order_relaxed));
         return true;
     }
 
