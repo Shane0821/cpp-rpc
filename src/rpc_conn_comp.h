@@ -25,7 +25,7 @@ class RpcConnComp : public llbc::LLBC_Component {
     // callback when recv packet
     void OnRecvPacket(llbc::LLBC_Packet &packet) noexcept;
 
-    static constexpr int MAX_QUEUE_SIZE = 1024;
+    static constexpr int MAX_QUEUE_SIZE = 4096;
 
    private:
     SPSCQueue<llbc::LLBC_Packet, MAX_QUEUE_SIZE> sendQueue_;
