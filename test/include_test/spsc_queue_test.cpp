@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <thread>
+
 struct Item {
    public:
     Item() = default;
@@ -11,7 +13,7 @@ struct Item {
     int b = 0;
 };
 
-TEST(SPSCQueueTest, PushTest) {
+TEST(SPSCQueueTest, Push) {
     SPSCQueue<Item, 1024> q;
     for (int i = 0; i < 1023; ++i) {
         EXPECT_TRUE(q.emplace(i, i + 1));
@@ -19,7 +21,7 @@ TEST(SPSCQueueTest, PushTest) {
     EXPECT_FALSE(q.emplace(1023, 1024));
 }
 
-TEST(SPSCQueueTest, PopTest) {
+TEST(SPSCQueueTest, Pop) {
     SPSCQueue<Item, 1024> q;
     for (int i = 0; i < 1023; ++i) {
         q.emplace(i, i + 1);
@@ -34,7 +36,7 @@ TEST(SPSCQueueTest, PopTest) {
     EXPECT_FALSE(q.pop(item));
 }
 
-TEST(SPSCQueueTest, SizeTest) {
+TEST(SPSCQueueTest, Size) {
     SPSCQueue<Item, 1024> q;
     for (int i = 0; i < 1023; ++i) {
         EXPECT_TRUE(q.emplace(i, i + 1));
@@ -50,7 +52,7 @@ TEST(SPSCQueueTest, SizeTest) {
     }
 }
 
-TEST(SPSCQueueTest, EmptyTest) {
+TEST(SPSCQueueTest, Empty) {
     SPSCQueue<Item, 1024> q;
     EXPECT_EQ(q.empty(), true);
     for (int i = 0; i < 1023; ++i) {
@@ -64,4 +66,28 @@ TEST(SPSCQueueTest, EmptyTest) {
         q.pop(item);
     }
     EXPECT_EQ(q.empty(), true);
+}
+
+TEST(SPSCQueueTest, Concurrency) {
+    constexpr int capacity = 10000000;
+    SPSCQueue<Item, capacity> q;
+    std::thread producer([&q] {
+        for (int i = 0; i < capacity - 1; ++i) {
+            EXPECT_TRUE(q.emplace(i, i + 1));
+        }
+    });
+
+    std::thread consumer([&q] {
+        for (int i = 0; i < capacity - 1; ++i) {
+            Item item;
+            while (!q.pop(item)) {
+            }
+            EXPECT_EQ(item.a, i);
+            EXPECT_EQ(item.b, i + 1);
+        }
+        EXPECT_EQ(q.empty(), true);
+    });
+
+    producer.join();
+    consumer.join();
 }
