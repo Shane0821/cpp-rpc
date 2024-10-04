@@ -69,7 +69,7 @@ TEST(MPMCQueueTest, Empty) {
 }
 
 TEST(MPMCQueueTest, SPMC) {
-    constexpr int capacity = 100000;
+    constexpr int capacity = 1000000;
 
     std::vector<int> vis(capacity, 0);
 
@@ -119,28 +119,30 @@ TEST(MPMCQueueTest, SPMC) {
 
 TEST(MPMCQueueTest, MPMC) {
     constexpr int capacity = 100000;
+    constexpr int half_capacity = capacity / 2;
+    constexpr int quarter_capacity = capacity / 4;
 
     std::vector<int> vis(capacity, 0);
 
     MPMCQueue<Item, capacity> q;
-    std::thread producer1([&q] {
-        for (int i = 0; i < capacity / 4; ++i) {
+    std::thread producer1([&] {
+        for (int i = 0; i < quarter_capacity; ++i) {
             ASSERT_TRUE(q.emplace(i, i + 1));
         }
     });
-    std::thread producer2([&q] {
-        for (int i = capacity / 4; i < capacity / 2; ++i) {
+    std::thread producer2([&] {
+        for (int i = quarter_capacity; i < half_capacity; ++i) {
             ASSERT_TRUE(q.emplace(i, i + 1));
         }
     });
-    std::thread producer3([&q] {
-        for (int i = capacity / 2; i < capacity - 1; ++i) {
+    std::thread producer3([&] {
+        for (int i = half_capacity; i < capacity - 1; ++i) {
             ASSERT_TRUE(q.emplace(i, i + 1));
         }
     });
 
     std::thread consumer1([&] {
-        for (int i = 0; i < capacity / 4; ++i) {
+        for (int i = 0; i < quarter_capacity; ++i) {
             Item item;
             while (!q.pop(item));
             ASSERT_EQ(vis[item.a], 0);
@@ -148,7 +150,7 @@ TEST(MPMCQueueTest, MPMC) {
         }
     });
     std::thread consumer2([&] {
-        for (int i = 0; i < capacity / 4; ++i) {
+        for (int i = 0; i < quarter_capacity; ++i) {
             Item item;
             while (!q.pop(item));
             ASSERT_EQ(vis[item.a], 0);
@@ -156,7 +158,7 @@ TEST(MPMCQueueTest, MPMC) {
         }
     });
     std::thread consumer3([&] {
-        for (int i = 0; i < capacity / 2 - 1; ++i) {
+        for (int i = 0; i < half_capacity - 1; ++i) {
             Item item;
             while (!q.pop(item));
             ASSERT_EQ(vis[item.a], 0);
