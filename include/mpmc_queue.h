@@ -57,9 +57,8 @@ class MPMCQueue : private std::allocator<T> {
     }
 
     size_t size() const noexcept {
-        auto h = head_.load(std::memory_order_acquire);
-        auto t = tail_.load(std::memory_order_acquire);
-        return (t >= h) ? t - h : Capacity - h + t;
+        return tail_.load(std::memory_order_acquire) -
+               head_.load(std::memory_order_acquire);
     }
 
     bool empty() const noexcept {
