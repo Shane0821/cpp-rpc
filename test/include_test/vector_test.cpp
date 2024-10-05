@@ -12,6 +12,9 @@ TEST(VectorTest, Constructor) {
     EXPECT_EQ(v2.size(), 10);
     EXPECT_EQ(v2.capacity(), 10);
     EXPECT_FALSE(v2.empty());
+    for (size_t i = 0; i < v2.size(); ++i) {
+        EXPECT_EQ(v2[i], 0);
+    }
 
     Vector<int> v3(10, 42);
     EXPECT_EQ(v3.size(), 10);
@@ -29,6 +32,7 @@ TEST(VectorTest, CopyConstructor) {
     v.push_back(30);
 
     Vector<int> v_copy = v;
+    v.clear();
     EXPECT_EQ(v_copy.size(), 3);
     EXPECT_EQ(v_copy.capacity(), 4);
     EXPECT_FALSE(v_copy.empty());
@@ -103,6 +107,16 @@ TEST(VectorTest, Clear) {
     EXPECT_EQ(v.size(), 0);
     EXPECT_EQ(v.capacity(), 4);
     EXPECT_TRUE(v.empty());
+
+    v.push_back(40);
+    v.push_back(50);
+    v.push_back(60);
+    EXPECT_EQ(v.size(), 3);
+    EXPECT_EQ(v.capacity(), 4);
+    EXPECT_FALSE(v.empty());
+    EXPECT_EQ(v[0], 40);
+    EXPECT_EQ(v[1], 50);
+    EXPECT_EQ(v[2], 60);
 }
 
 TEST(VectorTest, IndexOperator) {
