@@ -4,6 +4,8 @@
 #include <atomic>
 #include <memory>
 
+#define size_t uint64_t
+
 // multi-producer multi-consumer queue
 template <typename T, size_t Capacity>
 class MPMCQueue : private std::allocator<T> {
@@ -32,7 +34,7 @@ class MPMCQueue : private std::allocator<T> {
         size_t t, w;
         do {
             t = tail_.load(std::memory_order_relaxed);
-            if ((t + 1) % Capacity == head_.load(std::memory_order_acquire)) {
+            if ((t + 1) % Capacity == erase_.load(std::memory_order_acquire)) {
                 return false;
             }
         } while (!tail_.compare_exchange_weak(t, (t + 1) % Capacity,
@@ -52,16 +54,22 @@ class MPMCQueue : private std::allocator<T> {
         static_assert(std::is_nothrow_destructible<T>::value,
                       "T must be nothrow destructible");
 
-        size_t h;
+        size_t h, e;
         do {
             h = head_.load(std::memory_order_relaxed);
             if (h == write_.load(std::memory_order_acquire)) {
                 return false;
             }
-            result = std::move(data_[h]);
-            std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + h);
-        } while (!head_.compare_exchange_strong(
+        } while (!head_.compare_exchange_weak(
             h, (h + 1) % Capacity, std::memory_order_release, std::memory_order_relaxed));
+
+        result = std::move(data_[h]);
+        std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + h);
+
+        do {
+            e = h;
+        } while (!erase_.compare_exchange_weak(
+            e, (e + 1) % Capacity, std::memory_order_release, std::memory_order_relaxed));
         return true;
     }
 
@@ -81,6 +89,7 @@ class MPMCQueue : private std::allocator<T> {
     std::atomic<size_t> head_{0};
     std::atomic<size_t> tail_{0};
     std::atomic<size_t> write_{0};
+    std::atomic<size_t> erase_{0};
 };
 
 #endif  // _SPSC_QUEUE_H
