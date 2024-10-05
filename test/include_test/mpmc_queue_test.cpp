@@ -15,10 +15,10 @@ struct Item {
 
 TEST(MPMCQueueTest, Push) {
     MPMCQueue<Item, 1024> q;
-    for (int i = 0; i < 1023; ++i) {
+    for (int i = 0; i < 1024; ++i) {
         q.emplace(i, i + 1);
     }
-    ASSERT_EQ(q.size(), 1023);
+    ASSERT_EQ(q.size(), 1024);
 }
 
 TEST(MPMCQueueTest, Pop) {
