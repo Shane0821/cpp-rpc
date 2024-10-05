@@ -9,32 +9,24 @@ class Vector {
     Vector() noexcept : size_(0), capacity_(0), data_(nullptr) {}
 
     Vector(size_t size) noexcept : size_(size), capacity_(size), data_(nullptr) {
+        static_assert(std::is_default_constructible<T>::value,
+                      "Type must be default constructible");
+
         data_ = alloc_.allocate(capacity_);
-        for (size_t i = 0; i < size_; ++i) {
-            std::allocator_traits<Alloc>::construct(alloc_, data_ + i);
-        }
+        std::__uninitialized_default_n(data_, size_);
     }
 
-    Vector(size_t size, T value) noexcept : size_(size), capacity_(size), data_(nullptr) {
+    Vector(size_t size, const T& value) noexcept
+        : size_(size), capacity_(size), data_(nullptr) {
         data_ = alloc_.allocate(capacity_);
-        for (size_t i = 0; i < size_; ++i) {
-            std::allocator_traits<Alloc>::construct(alloc_, data_ + i, value);
-        }
-    }
-
-    // Destructor
-    ~Vector() noexcept {
-        clear();
-        std::allocator_traits<Alloc>::deallocate(alloc_, data_, capacity_);
+        std::uninitialized_fill_n(data_, size_, value);
     }
 
     // Copy constructor (deep copy)
     Vector(const Vector& other) noexcept
         : size_(other.size_), capacity_(other.capacity_), data_(nullptr) {
         data_ = std::allocator_traits<Alloc>::allocate(alloc_, capacity_);
-        for (size_t i = 0; i < size_; ++i) {
-            std::allocator_traits<Alloc>::construct(alloc_, data_ + i, other.data_[i]);
-        }
+        std::uninitialized_copy(other.data_, other.data_ + size_, data_);
     }
 
     // Move constructor (steals resources)
@@ -43,6 +35,12 @@ class Vector {
         other.size_ = 0;
         other.capacity_ = 0;
         other.data_ = nullptr;
+    }
+
+    // Destructor
+    ~Vector() noexcept {
+        clear();
+        std::allocator_traits<Alloc>::deallocate(alloc_, data_, capacity_);
     }
 
     // Copy assignment operator (deep copy)
@@ -59,9 +57,7 @@ class Vector {
         size_ = other.size_;
         capacity_ = other.capacity_;
         data_ = std::allocator_traits<Alloc>::allocate(alloc_, capacity_);
-        for (size_t i = 0; i < size_; ++i) {
-            std::allocator_traits<Alloc>::construct(alloc_, data_ + i, other.data_[i]);
-        }
+        std::uninitialized_copy(other.data_, other.data_ + size_, data_);
 
         return *this;
     }
@@ -94,7 +90,7 @@ class Vector {
         if (size_ == capacity_) {
             reserve(capacity_ == 0 ? 1 : capacity_ * 2);
         }
-        std::allocator_traits<Alloc>::construct(alloc_, data_ + size_, value);
+        std::construct_at(data_ + size_, value);
         ++size_;
     }
 
@@ -109,14 +105,13 @@ class Vector {
             reserve(capacity_ == 0 ? 1 : capacity_ * 2);
         }
         // Forward the arguments to construct the element in-place
-        std::allocator_traits<Alloc>::construct(alloc_, data_ + size_,
-                                                std::forward<Args>(args)...);
+        std::construct_at(data_ + size_, std::forward<Args>(args)...);
         ++size_;
     }
 
     void pop_back() noexcept {
         if (size_ > 0) {
-            std::allocator_traits<Alloc>::destroy(alloc_, data_ + size_ - 1);
+            std::destroy_at(data_ + size_ - 1);
             --size_;
         }
     }
@@ -125,11 +120,8 @@ class Vector {
     void reserve(size_t new_capacity) noexcept {
         if (new_capacity > capacity_) {
             T* new_data = alloc_.allocate(new_capacity);
-            for (size_t i = 0; i < size_; ++i) {
-                std::allocator_traits<Alloc>::construct(alloc_, new_data + i,
-                                                        std::move(data_[i]));
-                std::allocator_traits<Alloc>::destroy(alloc_, data_ + i);
-            }
+            std::uninitialized_move(data_, data_ + size_, new_data);
+            std::destroy(data_, data_ + size_);
             std::allocator_traits<Alloc>::deallocate(alloc_, data_, capacity_);
             data_ = new_data;
             capacity_ = new_capacity;
@@ -139,32 +131,24 @@ class Vector {
     // Resize the vector to contain new_size elements
     void resize(size_t new_size) noexcept {
         if (new_size < size_) {
-            for (size_t i = new_size; i < size_; ++i) {
-                std::allocator_traits<Alloc>::destroy(alloc_, data_ + i);
-            }
+            std::destroy(data_ + new_size, data_ + size_);
         } else if (new_size > size_) {
             if (new_size > capacity_) {
                 reserve(new_size);
             }
-            for (size_t i = size_; i < new_size; ++i) {
-                std::allocator_traits<Alloc>::construct(alloc_, data_ + i);
-            }
+            std::__uninitialized_default(data_ + size_, data_ + new_size);
         }
         size_ = new_size;
     }
 
-    void resize(size_t new_size, T value) noexcept {
+    void resize(size_t new_size, const T& value) noexcept {
         if (new_size < size_) {
-            for (size_t i = new_size; i < size_; ++i) {
-                std::allocator_traits<Alloc>::destroy(alloc_, data_ + i);
-            }
+            std::destroy(data_ + new_size, data_ + size_);
         } else if (new_size > size_) {
             if (new_size > capacity_) {
                 reserve(new_size);
             }
-            for (size_t i = size_; i < new_size; ++i) {
-                std::allocator_traits<Alloc>::construct(alloc_, data_ + i, value);
-            }
+            std::uninitialized_fill(data_ + size_, data_ + new_size, value);
         }
         size_ = new_size;
     }
@@ -189,9 +173,7 @@ class Vector {
 
     // Clear the vector (destroy all elements)
     void clear() noexcept {
-        for (size_t i = 0; i < size_; ++i) {
-            std::allocator_traits<Alloc>::destroy(alloc_, data_ + i);
-        }
+        std::destroy(data_, data_ + size_);
         size_ = 0;
     }
 
@@ -205,38 +187,3 @@ class Vector {
     T* data_;
     Alloc alloc_;
 };
-
-// // Example usage
-// int main() {
-//     Vector<int> v;
-//     v.push_back(10);
-//     v.push_back(20);
-//     v.push_back(30);
-
-//     // Copy constructor
-//     Vector<int> v_copy = v;
-
-//     std::cout << "Original vector: ";
-//     for (size_t i = 0; i < v.size(); ++i) {
-//         std::cout << v[i] << " ";
-//     }
-//     std::cout << "\nCopied vector: ";
-//     for (size_t i = 0; i < v_copy.size(); ++i) {
-//         std::cout << v_copy[i] << " ";
-//     }
-//     std::cout << std::endl;
-
-//     // Move constructor
-//     Vector<int> v_moved = std::move(v);
-//     std::cout << "Moved vector: ";
-//     for (size_t i = 0; i < v_moved.size(); ++i) {
-//         std::cout << v_moved[i] << " ";
-//     }
-//     std::cout << std::endl;
-
-//     // After the move, the original vector should be empty
-//     std::cout << "Original vector after move: " << v.size() << " elements" <<
-//     std::endl;
-
-//     return 0;
-// }
