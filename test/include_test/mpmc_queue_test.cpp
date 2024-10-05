@@ -16,9 +16,9 @@ struct Item {
 TEST(MPMCQueueTest, Push) {
     MPMCQueue<Item, 1024> q;
     for (int i = 0; i < 1023; ++i) {
-        ASSERT_TRUE(q.emplace(i, i + 1));
+        q.emplace(i, i + 1);
     }
-    ASSERT_FALSE(q.emplace(1023, 1024));
+    ASSERT_EQ(q.size(), 1023);
 }
 
 TEST(MPMCQueueTest, Pop) {
@@ -28,26 +28,24 @@ TEST(MPMCQueueTest, Pop) {
     }
     for (int i = 0; i < 1023; ++i) {
         Item item;
-        ASSERT_TRUE(q.pop(item));
+        q.pop(item);
         ASSERT_EQ(item.a, i);
         ASSERT_EQ(item.b, i + 1);
     }
-    Item item;
-    ASSERT_FALSE(q.pop(item));
+    ASSERT_TRUE(q.empty());
 }
 
 TEST(MPMCQueueTest, Size) {
     MPMCQueue<Item, 1024> q;
     for (int i = 0; i < 1023; ++i) {
-        ASSERT_TRUE(q.emplace(i, i + 1));
+        q.emplace(i, i + 1);
         ASSERT_EQ(q.size(), i + 1);
     }
-    ASSERT_FALSE(q.emplace(1023, 1024));
     ASSERT_EQ(q.size(), 1023);
 
     for (int i = 0; i < 1023; ++i) {
         Item item;
-        ASSERT_TRUE(q.pop(item));
+        q.pop(item);
         ASSERT_EQ(q.size(), 1023 - i - 1);
     }
 }
@@ -69,21 +67,21 @@ TEST(MPMCQueueTest, Empty) {
 }
 
 TEST(MPMCQueueTest, SPMC) {
-    constexpr int capacity = 2000000;
+    constexpr int capacity = 5000000;
 
     std::vector<int> vis(capacity, 0);
 
     MPMCQueue<Item, capacity> q;
     std::thread producer1([&q] {
         for (int i = 0; i < capacity - 1; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
 
     std::thread consumer1([&] {
         for (int i = 0; i < capacity / 4; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
@@ -91,7 +89,7 @@ TEST(MPMCQueueTest, SPMC) {
     std::thread consumer2([&] {
         for (int i = 0; i < capacity / 4; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
@@ -99,7 +97,7 @@ TEST(MPMCQueueTest, SPMC) {
     std::thread consumer3([&] {
         for (int i = 0; i < capacity / 2 - 1; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
@@ -118,7 +116,7 @@ TEST(MPMCQueueTest, SPMC) {
 }
 
 TEST(MPMCQueueTest, MPSC) {
-    constexpr int capacity = 2000000;
+    constexpr int capacity = 5000000;
     constexpr int half_capacity = capacity / 2;
     constexpr int quarter_capacity = capacity / 4;
 
@@ -127,24 +125,24 @@ TEST(MPMCQueueTest, MPSC) {
     MPMCQueue<Item, capacity> q;
     std::thread producer1([&] {
         for (int i = 0; i < quarter_capacity; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
     std::thread producer2([&] {
         for (int i = quarter_capacity; i < half_capacity; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
     std::thread producer3([&] {
         for (int i = half_capacity; i < capacity - 1; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
 
     std::thread consumer1([&] {
         for (int i = 0; i < capacity - 1; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
@@ -160,7 +158,7 @@ TEST(MPMCQueueTest, MPSC) {
 }
 
 TEST(MPMCQueueTest, MPMC) {
-    constexpr int capacity = 2000000;
+    constexpr int capacity = 5000000;
     constexpr int half_capacity = capacity / 2;
     constexpr int quarter_capacity = capacity / 4;
 
@@ -169,24 +167,24 @@ TEST(MPMCQueueTest, MPMC) {
     MPMCQueue<Item, capacity> q;
     std::thread producer1([&] {
         for (int i = 0; i < quarter_capacity; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
     std::thread producer2([&] {
         for (int i = quarter_capacity; i < half_capacity; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
     std::thread producer3([&] {
         for (int i = half_capacity; i < capacity - 1; ++i) {
-            ASSERT_TRUE(q.emplace(i, i + 1));
+            q.emplace(i, i + 1);
         }
     });
 
     std::thread consumer1([&] {
         for (int i = 0; i < quarter_capacity; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
@@ -194,7 +192,7 @@ TEST(MPMCQueueTest, MPMC) {
     std::thread consumer2([&] {
         for (int i = 0; i < quarter_capacity; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
@@ -202,7 +200,7 @@ TEST(MPMCQueueTest, MPMC) {
     std::thread consumer3([&] {
         for (int i = 0; i < half_capacity - 1; ++i) {
             Item item;
-            while (!q.pop(item));
+            q.pop(item);
             ASSERT_EQ(vis[item.a], 0);
             vis[item.a] = 1;
         }
