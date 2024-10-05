@@ -19,9 +19,7 @@ class MPMCQueue : private std::allocator<T> {
     MPMCQueue &operator=(const MPMCQueue &) = delete;
 
     ~MPMCQueue() {
-        for (size_t i = 0; i < Capacity; ++i) {
-            std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + i);
-        }
+        std::destroy(data_, data_ + Capacity);
         std::allocator_traits<std::allocator<T>>::deallocate(*this, data_, Capacity);
     }
 
@@ -40,8 +38,7 @@ class MPMCQueue : private std::allocator<T> {
         } while (!tail_.compare_exchange_weak(
             t, (t + 1) % Capacity, std::memory_order_release, std::memory_order_relaxed));
 
-        std::allocator_traits<std::allocator<T>>::construct(*this, data_ + t,
-                                                            std::forward<Args>(args)...);
+        std::construct_at(data_ + t, std::forward<Args>(args)...);
 
         do {
             w = t;
@@ -64,7 +61,7 @@ class MPMCQueue : private std::allocator<T> {
             h, (h + 1) % Capacity, std::memory_order_release, std::memory_order_relaxed));
 
         result = std::move(data_[h]);
-        std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + h);
+        std::destroy_at(data_ + h);
 
         do {
             e = h;
