@@ -37,8 +37,8 @@ class MPMCQueue : private std::allocator<T> {
             if ((t + 1) % Capacity == erase_.load(std::memory_order_acquire)) {
                 return false;
             }
-        } while (!tail_.compare_exchange_weak(t, (t + 1) % Capacity,
-                                              std::memory_order_relaxed));
+        } while (!tail_.compare_exchange_weak(
+            t, (t + 1) % Capacity, std::memory_order_release, std::memory_order_relaxed));
 
         std::allocator_traits<std::allocator<T>>::construct(*this, data_ + t,
                                                             std::forward<Args>(args)...);
