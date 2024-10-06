@@ -7,6 +7,7 @@ RpcConnMgr::~RpcConnMgr() noexcept {
     delete comp_;
     if (svc_) {
         svc_->Stop();
+        delete svc_;
     }
 }
 
@@ -17,7 +18,7 @@ int RpcConnMgr::Init() noexcept {
         delete svc_;
     }
     // Create service
-    svc_ = llbc::LLBC_Service::Create("Svc");
+    svc_ = llbc::LLBC_Service::Create("Svc");  // newed
     comp_ = new RpcConnComp;
     svc_->AddComponent(comp_);
     svc_->SetFPS(1000);
