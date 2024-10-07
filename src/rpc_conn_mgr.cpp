@@ -75,6 +75,7 @@ void RpcConnMgr::Tick() noexcept {
         else
             (it->second)(*packet);  // handle rep or handle rsp
     }
+    LLBC_Recycle(packet);
 }
 
 int RpcConnMgr::Subscribe(int cmdID,
@@ -92,5 +93,6 @@ int RpcConnMgr::BlockingRecvPacket(llbc::LLBC_Packet &recvPacket) {
         llbc::LLBC_Sleep(1);
         count++;
     }
+    if (count != RECEIVE_TIME_OUT) return LLBC_OK;
     return LLBC_FAILED;
 }
