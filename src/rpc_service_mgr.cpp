@@ -146,14 +146,16 @@ void RpcServiceMgr::OnRpcDone(
 
     auto &[req, rsp] = req_rsp;
 
+    llbc::LLBC_Packet *packet =
+        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+
     auto cleanUp = [&]() {
         delete req;
         delete rsp;
         delete controller;
+        LLBC_Recycle(packet);
     };
 
-    llbc::LLBC_Packet *packet =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
     COND_RET_ELOG(
         !packet, cleanUp(),
         "OnRpcDone: alloc packet from obj pool failed|pkg_head: %s|req: %s|rsp: %s",
