@@ -46,6 +46,7 @@ void RpcConnComp::OnUpdate() {
             LLOG_ERROR("Send packet failed, err: %s", llbc::LLBC_FormatLastError());
         }
     }
+    LLBC_Recycle(sendPacket);
 }
 
 void RpcConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) noexcept {
