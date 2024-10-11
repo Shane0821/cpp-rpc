@@ -4,7 +4,6 @@ PROTOBUF_PATH="${PROJ_ROOT}/3rd/protobuf"
 LLBC_PATH="${PROJ_ROOT}/3rd/llbc"
 PROTO_SRC_PATH="${PROTOBUF_PATH}/src"
 PROTOC_PATH="${PROTO_SRC_PATH}/protoc"
-LLBC_PATH="${PROJ_ROOT}/llbc"
 
 # build protobuf lib function
 build_protobuf() {
@@ -22,7 +21,6 @@ build_protobuf() {
 # build llbc lib function
 build_llbc() {
     echo "Building llbc"
-    git submodule update --init --recursive
     cd $LLBC_PATH
     make core_lib -j$(nproc)
     echo "Building llbc done"
