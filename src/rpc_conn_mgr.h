@@ -16,6 +16,8 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
 
     int Init() noexcept;
 
+    void Destroy() noexcept;
+
     // start rpc service and listen on ip:port
     int StartRpcService(const char *ip, int port) noexcept;
 

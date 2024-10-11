@@ -74,9 +74,12 @@ int RpcClient::InitRpcLib() {
 }
 
 void RpcClient::Destroy() {
-    llbc::LLBC_Cleanup();
+    LLOG_TRACE("Destroying client...");
+    RpcConnMgr::GetInst().Destroy();
     initialized_ = false;
-    std::cout << "RpcClient uninitialized.\n";
+    LLOG_TRACE("Clean up llbc...");
+    llbc::LLBC_Cleanup();
+    std::cout << "RpcClient destroyed.\n";
 }
 
 RpcChannel *RpcClient::RegisterRpcChannel(const char *ip, int port) {

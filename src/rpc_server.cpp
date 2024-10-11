@@ -8,10 +8,14 @@
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
 
-RpcServer::~RpcServer() { Stop(); }
+RpcServer::~RpcServer() {
+    Stop();
+    RpcClient::Destroy();
+}
 
 void RpcServer::SignalHandler(int signum) {
-    std::cout << "SignalHandler: interrupt signal (" << signum << ") received.\n";
+    std::cout << "RpcServer SignalHandler: interrupt signal (" << signum
+              << ") received.\n";
     RpcServer::GetInst().Stop();
 }
 
@@ -59,9 +63,7 @@ void RpcServer::Stop() {
         return;
     }
     stop_ = true;
-    LLOG_TRACE("Server stopped.");
-    RpcClient::Destroy();
-    std::cout << "RpcServer stopped.\n";
+    LLOG_TRACE("Server Stop Set.");
 }
 
 void RpcServer::AddService(::google::protobuf::Service *service) {
@@ -87,4 +89,6 @@ void RpcServer::Serve() {
     }
 
     LLOG_INFO(">>> RPC SERVER STOP SERVING <<<");
+
+    RpcClient::Destroy();
 }

@@ -13,10 +13,9 @@ RpcConnMgr::~RpcConnMgr() noexcept {
 
 int RpcConnMgr::Init() noexcept {
     if (svc_) {
-        svc_->Stop();
-        delete comp_;
-        delete svc_;
+        Destroy();
     }
+    LLOG_TRACE("RpcConnMgr Init");
     // Create service
     svc_ = llbc::LLBC_Service::Create("Svc");  // newed
     comp_ = new RpcConnComp;
@@ -28,6 +27,16 @@ int RpcConnMgr::Init() noexcept {
     auto ret = svc_->Start(4);
     LLOG_TRACE("Service start, ret: %d", ret);
     return ret;
+}
+
+void RpcConnMgr::Destroy() noexcept {
+    if (svc_) {
+        svc_->Stop();
+        LLOG_TRACE("RpcConnMgr Svc Stopped");
+        // delete svc_;  // components will be deleted by service
+        svc_ = nullptr;
+    }
+    LLOG_TRACE("RpcConnMgr Destroyed");
 }
 
 int RpcConnMgr::StartRpcService(const char *ip, int port) noexcept {
@@ -61,8 +70,7 @@ int RpcConnMgr::CloseSession(int sessionID) {
 }
 
 void RpcConnMgr::Tick() noexcept {
-    llbc::LLBC_Packet *packet =
-        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
+    llbc::LLBC_Packet *packet = llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
     if (!packet) {
         LLOG_ERROR("Acquire packet from ojbect pool failed");
         return;
