@@ -4,7 +4,6 @@
 #include "rpc_client.h"
 #include "rpc_controller.h"
 
-const char *CLIENT_LLOG_CONF_PATH = "../../config/client_log.cfg";
 const char *SERVICE_NAME = "echo.EchoService.Echo";
 
 class EchoClient : public RpcClient {
@@ -57,7 +56,11 @@ class EchoClient : public RpcClient {
 int main() {
     EchoClient client;
     client.Init();
-    client.SetLogConfPath(CLIENT_LLOG_CONF_PATH);
+
+    const std::string path = __FILE__;
+    const std::string CLIENT_LLOG_CONF_PATH =
+        path.substr(0, path.find_last_of("/\\")) + "/../../../config/client_log.cfg";
+    client.SetLogConfPath(CLIENT_LLOG_CONF_PATH.c_str());
 
     LLOG_TRACE("CallMeathod Start");
     client.BlockingCallMethod();
