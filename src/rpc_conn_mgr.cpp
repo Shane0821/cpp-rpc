@@ -4,7 +4,6 @@
 #include "rpc_macros.h"
 
 RpcConnMgr::~RpcConnMgr() noexcept {
-    delete comp_;
     if (svc_) {
         svc_->Stop();
         delete svc_;
@@ -18,15 +17,30 @@ int RpcConnMgr::Init() noexcept {
     LLOG_TRACE("RpcConnMgr Init");
     // Create service
     svc_ = llbc::LLBC_Service::Create("Svc");  // newed
-    comp_ = new RpcConnComp;
-    svc_->AddComponent(comp_);
-    svc_->SetFPS(1000);
-    svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp_, &RpcConnComp::OnRecvPacket);
-    svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp_, &RpcConnComp::OnRecvPacket);
-    svc_->SuppressCoderNotFoundWarning();
-    auto ret = svc_->Start(4);
-    LLOG_TRACE("Service start, ret: %d", ret);
-    return ret;
+    if (!svc_) {
+        LLOG_ERROR("Create LLBC service failed");
+        return LLBC_FAILED;
+    }
+    int ret = svc_->AddComponent(new RpcConnComp);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "AddComponent failed, ret: %d", ret);
+
+    ret = svc_->SetFPS(1000);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "SetFPS failed, ret: %d", ret);
+
+    ret =
+        svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp_, &RpcConnComp::OnRecvPacket);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "Subscribe RpcReq failed, ret: %d", ret);
+    ret =
+        svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp_, &RpcConnComp::OnRecvPacket);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "Subscribe RpcRsp failed, ret: %d", ret);
+
+    ret = svc_->SuppressCoderNotFoundWarning();
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED,
+                  "SuppressCoderNotFoundWarning failed, ret: %d", ret);
+
+    ret = svc_->Start(4);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "Start service failed, ret: %d", ret);
+    return LLBC_OK;
 }
 
 void RpcConnMgr::Destroy() noexcept {
