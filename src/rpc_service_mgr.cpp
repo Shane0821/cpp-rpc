@@ -147,7 +147,7 @@ void RpcServiceMgr::OnRpcDone(
     auto &[req, rsp] = req_rsp;
 
     llbc::LLBC_Packet *packet =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
 
     auto cleanUp = [&]() {
         delete req;

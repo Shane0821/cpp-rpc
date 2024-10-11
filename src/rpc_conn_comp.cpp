@@ -34,7 +34,7 @@ void RpcConnComp::OnProtoReport(const llbc::LLBC_ProtoReport &report) {
 
 void RpcConnComp::OnUpdate() {
     llbc::LLBC_Packet *sendPacket =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
     if (!sendPacket) {
         LLOG_ERROR("OnUpdate: acquire packet from ojbect pool failed");
         return;

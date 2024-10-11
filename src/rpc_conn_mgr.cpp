@@ -62,7 +62,7 @@ int RpcConnMgr::CloseSession(int sessionID) {
 
 void RpcConnMgr::Tick() noexcept {
     llbc::LLBC_Packet *packet =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
     if (!packet) {
         LLOG_ERROR("Acquire packet from ojbect pool failed");
         return;

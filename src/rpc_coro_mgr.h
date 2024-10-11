@@ -28,7 +28,7 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
     };
 
     struct contextCmp {
-        bool operator()(context &a, context &b) {
+        bool operator()(const context &a, const context &b) const {
             return a.timeout_time < b.timeout_time;
         }
     };
@@ -66,7 +66,7 @@ class RpcCoroMgr : public Singleton<RpcCoroMgr> {
    private:
     std::unordered_map<coro_uid_type, context>
         suspended_contexts_;  // suspended coro contextss
-    llbc::LLBC_Heap<context, std::vector<context>, contextCmp> coroHeap_;  // timeout heap
+    llbc::LLBC_BinaryHeap<context, contextCmp> coroHeap_;  // timeout heap
 
     static coro_uid_type coro_uid_generator_;  // coro_uid generator, which should
                                                // generate unique id without `0`.

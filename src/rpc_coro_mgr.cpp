@@ -3,7 +3,7 @@
 RpcCoroMgr::coro_uid_type RpcCoroMgr::coro_uid_generator_ = 0UL;
 
 bool RpcCoroMgr::AddCoroContext(context ctx) noexcept {
-    coroHeap_.push(ctx);
+    coroHeap_.Insert(ctx);
     return suspended_contexts_.insert({ctx.coro_uid, ctx}).second;
 }
 
@@ -22,13 +22,13 @@ void RpcCoroMgr::KillCoro(context &ctx, const std::string &reason) noexcept {
 }
 
 void RpcCoroMgr::HandleCoroTimeout() noexcept {
-    llbc::sint64 now = llbc::LLBC_GetMilliseconds();
-    while (!coroHeap_.empty()) {
-        auto top = coroHeap_.top();
+    llbc::sint64 now = llbc::LLBC_GetMilliSeconds();
+    while (!coroHeap_.IsEmpty()) {
+        auto top = coroHeap_.Top();
         if (top.timeout_time > now) {
             break;
         }
-        coroHeap_.pop();
+        coroHeap_.DeleteTop();
         // already resumed
         if (suspended_contexts_.find(top.coro_uid) == suspended_contexts_.end()) {
             continue;

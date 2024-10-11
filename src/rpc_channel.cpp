@@ -68,7 +68,7 @@ void RpcChannel::CallMethod(
     // store coroutine context
     RpcCoroMgr::GetInst().AddCoroContext({
         .coro_uid = seq,
-        .timeout_time = llbc::LLBC_GetMilliseconds() + RpcCoroMgr::CORO_TIME_OUT,
+        .timeout_time = llbc::LLBC_GetMicroSeconds() + RpcCoroMgr::CORO_TIME_OUT,
         .handle = std::coroutine_handle<RpcCoro::promise_type>::from_address(
             rpcController->GetCoroHandle()),
         .rsp = response,
@@ -76,7 +76,7 @@ void RpcChannel::CallMethod(
     });
 
     llbc::LLBC_Packet *sendPacket =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
     COND_RET_ELOG(sendPacket == nullptr,
                   RpcCoroMgr::GetInst().KillCoro(seq, "Acquire LLBC_Packet failed"),
                   "CallMethod: acquire LLBC_Packet failed");
@@ -114,7 +114,7 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
                                     const ::google::protobuf::Message *request,
                                     ::google::protobuf::Message *response) {
     llbc::LLBC_Packet *sendPacket =
-        llbc::LLBC_ThreadSpecObjPool::GetSafeObjPool()->Acquire<llbc::LLBC_Packet>();
+        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
     COND_RET_ELOG(sendPacket == nullptr,
                   controller->SetFailed("acquire LLBC_Packet failed"),
                   "CallMethod: acquire LLBC_Packet failed");
