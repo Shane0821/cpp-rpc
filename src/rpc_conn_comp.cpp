@@ -2,7 +2,9 @@
 
 #include "rpc_macros.h"
 
-RpcConnComp::RpcConnComp() : llbc::LLBC_Component() {}
+RpcConnComp::RpcConnComp()
+    : llbc::LLBC_Component(llbc::LLBC_ComponentEvents::DefaultEvents |
+                           llbc::LLBC_ComponentEvents::OnUpdate) {}
 
 bool RpcConnComp::OnInit(bool &initFinished) {
     LLOG_TRACE("RpcConnComp OnInit!");
