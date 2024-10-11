@@ -135,8 +135,10 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
     COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("packet.Write message failed"),
                   "BlockingCallMethod: packet.Write message failed|ret: %d", ret);
 
-    LLOG_DEBUG("BlockingCallMethod: send data|message: %s|packet: %s",
-               request->ShortDebugString().c_str(), sendPacket->ToString().c_str());
+    LLOG_DEBUG("BlockingCallMethod: send data|message: %s",
+               request->ShortDebugString().c_str());
+    LLOG_DEBUG("BlockingCallMethod: send data|packet: %s",
+               sendPacket->ToString().c_str());
     // send packet via conn_mgr
     ret = RpcConnMgr::GetInst().SendPacket(*sendPacket);
     COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("sendPacket failed"),
@@ -145,7 +147,10 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
 
     LLOG_TRACE("BlockingCallMethod: Packet sent. Waiting!");
 
-    auto recvPacket = sendPacket;
+    auto recvPacket = llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
+    COND_RET_ELOG(recvPacket == nullptr,
+                  controller->SetFailed("acquire LLBC_Packet failed"),
+                  "BlockingCallMethod: acquire LLBC_Packet failed");
 
     if (conn_mgr_->BlockingRecvPacket(*recvPacket) == LLBC_FAILED) {
         LLOG_ERROR("BlockingCallMethod: receive packet timeout!");
@@ -166,5 +171,6 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
 
     LLOG_TRACE("BlockingCallMethod: recved: %s|extdata:%lu",
                response->ShortDebugString().c_str(), pkg_head.seq);
-    LLBC_Recycle(sendPacket);
+
+    LLBC_Recycle(recvPacket);
 }
