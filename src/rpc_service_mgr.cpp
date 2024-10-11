@@ -46,7 +46,10 @@ RpcChannel *RpcServiceMgr::RegisterRpcChannel(const char *ip, int port) noexcept
         return it->second;
     }
     auto *channel = conn_mgr_->CreateRpcChannel(ip, port);
-    channels_[key] = channel;
+    if (channel)
+        channels_[key] = channel;
+    else
+        LLOG_ERROR("RegisterRpcChannel: create channel failed|ip:%s|port:%d", ip, port);
     return channel;
 }
 
@@ -146,8 +149,7 @@ void RpcServiceMgr::OnRpcDone(
 
     auto &[req, rsp] = req_rsp;
 
-    llbc::LLBC_Packet *packet =
-        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
+    llbc::LLBC_Packet *packet = llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
 
     auto cleanUp = [&]() {
         delete req;
