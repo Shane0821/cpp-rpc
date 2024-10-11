@@ -13,11 +13,17 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcController *cntl = new RpcController(true);
-        cntl->SetCoroHandle(co_await GetHandleAwaiter{});
         RpcChannel *channel =
             RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.Echo"].ip,
                                polaris::NameRegistry["echo.EchoService.Echo"].port);
+
+        if (!channel) {
+            co_return;
+        }
+
+        RpcController *cntl = new RpcController(true);
+        cntl->SetCoroHandle(co_await GetHandleAwaiter{});
+
         EchoServiceStub stub(channel);
 
         req.set_msg("Hello, Echo.");
@@ -36,10 +42,14 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcController *cntl = new RpcController(false);
         RpcChannel *channel =
             RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.Echo"].ip,
                                polaris::NameRegistry["echo.EchoService.Echo"].port);
+        if (!channel) {
+            return;
+        }
+
+        RpcController *cntl = new RpcController(false);
         EchoServiceStub stub(channel);
 
         req.set_msg("Hello, Echo.");
