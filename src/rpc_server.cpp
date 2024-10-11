@@ -8,9 +8,7 @@
 #include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
 
-RpcServer::~RpcServer() {
-    Stop();
-}
+RpcServer::~RpcServer() { Stop(); }
 
 void RpcServer::SignalHandler(int signum) {
     std::cout << "RpcServer SignalHandler: interrupt signal (" << signum
