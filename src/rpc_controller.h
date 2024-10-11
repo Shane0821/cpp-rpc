@@ -8,6 +8,8 @@
 class RpcController : public ::google::protobuf::RpcController {
    public:
     RpcController() = delete;
+
+    // use_coro: true for coro, false for blocking
     RpcController(bool use_coro) noexcept : use_coro_(use_coro) {};
     ~RpcController() noexcept = default;
 
