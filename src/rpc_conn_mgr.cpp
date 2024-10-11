@@ -91,7 +91,7 @@ void RpcConnMgr::Tick() noexcept {
         return;
     }
     while (RecvPacket(*packet) == LLBC_OK) {
-        LLOG_TRACE("Tick");
+        LLOG_TRACE("Tick: RecvPacket");
         auto it = packet_delegs_.find(packet->GetOpcode());
         if (it == packet_delegs_.end())
             LLOG_ERROR("Recv Untapped opcode:%d", packet->GetOpcode());
