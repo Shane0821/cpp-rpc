@@ -149,6 +149,7 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
     if (conn_mgr_->BlockingRecvPacket(*recvPacket) == LLBC_FAILED) {
         LLOG_ERROR("BlockingCallMethod: receive packet timeout!");
         controller->SetFailed("receive packet timeout");
+        return;
     }
 
     LLOG_TRACE("BlockingCallMethod: payload info|length:%lu|info: %s",
