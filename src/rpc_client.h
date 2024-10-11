@@ -15,11 +15,11 @@
  */
 class RpcClient {
    public:
-    RpcClient() = default;
-    ~RpcClient() = default;
+    RpcClient() noexcept = default;
+    ~RpcClient() noexcept { Destroy(); }
 
     int Init() noexcept;
-    void Destroy();
+    void Destroy() noexcept;
 
     int SetLogConfPath(const char *log_conf_path);
     RpcChannel *RegisterRpcChannel(const char *ip, int port);

@@ -10,7 +10,6 @@
 
 RpcServer::~RpcServer() {
     Stop();
-    RpcClient::Destroy();
 }
 
 void RpcServer::SignalHandler(int signum) {

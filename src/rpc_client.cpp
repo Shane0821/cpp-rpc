@@ -73,7 +73,11 @@ int RpcClient::InitRpcLib() {
     return LLBC_OK;
 }
 
-void RpcClient::Destroy() {
+void RpcClient::Destroy() noexcept {
+    if (!initialized_) {
+        std::cout << "RpcClient not initialized.\n";
+        return;
+    }
     LLOG_TRACE("Destroying client...");
     RpcConnMgr::GetInst().Destroy();
     initialized_ = false;
