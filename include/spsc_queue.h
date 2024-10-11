@@ -17,9 +17,7 @@ class SPSCQueue : private std::allocator<T> {
     SPSCQueue &operator=(const SPSCQueue &) = delete;
 
     ~SPSCQueue() {
-        for (int i = 0; i < Capacity; ++i) {
-            std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + i);
-        }
+        std::destroy(data_, data_ + Capacity);
         std::allocator_traits<std::allocator<T>>::deallocate(*this, data_, Capacity);
     }
 
@@ -33,8 +31,9 @@ class SPSCQueue : private std::allocator<T> {
         if ((t + 1) % Capacity == head_.load(std::memory_order_acquire)) {  // (1)
             return false;
         }
-        std::allocator_traits<std::allocator<T>>::construct(*this, data_ + t,
-                                                            std::forward<Args>(args)...);
+
+        std::construct_at(data_ + t, std::forward<Args>(args)...);
+
         // (2) synchronizes with (3)
         tail_.store((t + 1) % Capacity, std::memory_order_release);  // (2)
         return true;
@@ -49,7 +48,8 @@ class SPSCQueue : private std::allocator<T> {
             return false;
         }
         result = std::move(data_[h]);
-        std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + h);
+
+        std::destroy_at(data_ + h);
         head_.store((h + 1) % Capacity, std::memory_order_release);  // (4)
         return true;
     }
