@@ -21,18 +21,18 @@ int RpcConnMgr::Init() noexcept {
         LLOG_ERROR("Create LLBC service failed");
         return LLBC_FAILED;
     }
-    auto comp = new RpcConnComp;
-    int ret = svc_->AddComponent(comp);
+    comp_ = new RpcConnComp;
+    int ret = svc_->AddComponent(comp_);
     COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "AddComponent failed, ret: %d", ret);
 
     ret = svc_->SetFPS(1000);
     COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "SetFPS failed, ret: %d", ret);
 
     ret =
-        svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp, &RpcConnComp::OnRecvPacket);
+        svc_->Subscribe(RpcChannel::RpcOpCode::RpcReq, comp_, &RpcConnComp::OnRecvPacket);
     COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "Subscribe RpcReq failed, ret: %d", ret);
     ret =
-        svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp, &RpcConnComp::OnRecvPacket);
+        svc_->Subscribe(RpcChannel::RpcOpCode::RpcRsp, comp_, &RpcConnComp::OnRecvPacket);
     COND_RET_ELOG(ret != LLBC_OK, LLBC_FAILED, "Subscribe RpcRsp failed, ret: %d", ret);
 
     ret = svc_->SuppressCoderNotFoundWarning();

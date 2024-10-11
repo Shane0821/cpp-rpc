@@ -35,13 +35,11 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
 
     // add packet to send queue
     int SendPacket(llbc::LLBC_Packet &sendPacket) noexcept {
-        return static_cast<RpcConnComp *>(svc_->GetComponent("Svc"))
-            ->PushSendPacket(sendPacket);
+        return comp_->PushSendPacket(sendPacket);
     }
     // get packet from recv queue
     int RecvPacket(llbc::LLBC_Packet &recvPacket) noexcept {
-        return static_cast<RpcConnComp *>(svc_->GetComponent("Svc"))
-            ->PopRecvPacket(recvPacket);
+        return comp_->PopRecvPacket(recvPacket);
     }
     // block and wait for packet in recv queue
     int BlockingRecvPacket(llbc::LLBC_Packet &recvPacket);
@@ -58,6 +56,7 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
 
    private:
     llbc::LLBC_Service *svc_ = nullptr;  // llbc service
+    RpcConnComp *comp_ = nullptr;        // connection component
     bool is_server_ = false;             // is server or client
     int server_sessionID_ = 0;           // server session id
     std::unordered_map<int, llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>>
