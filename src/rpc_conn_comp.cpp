@@ -5,7 +5,7 @@
 RpcConnComp::RpcConnComp() : llbc::LLBC_Component() {}
 
 bool RpcConnComp::OnInit(bool &initFinished) {
-    LLOG_TRACE("Service create!");
+    LLOG_TRACE("RpcConnComp OnInit!");
     return true;
 }
 
@@ -33,6 +33,8 @@ void RpcConnComp::OnProtoReport(const llbc::LLBC_ProtoReport &report) {
 }
 
 void RpcConnComp::OnUpdate() {
+    LLOG_TRACE("OnUpdate: sendQueue size: %d, recvQueue size: %d", sendQueue_.size(),
+               recvQueue_.size());
     llbc::LLBC_Packet *sendPacket =
         llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
     if (!sendPacket) {
