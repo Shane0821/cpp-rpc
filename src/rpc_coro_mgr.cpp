@@ -44,6 +44,5 @@ RpcCoroMgr::context RpcCoroMgr::PopCoroContext(coro_uid_type coro_uid) noexcept 
         suspended_contexts_.erase(iter);
         return ctx;
     }
-    LLOG_ERROR("coro_uid not found|coro_uid:%lu", coro_uid);
     return context{.handle = nullptr, .rsp = nullptr};
 }
