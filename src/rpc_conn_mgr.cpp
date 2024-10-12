@@ -105,7 +105,9 @@ int RpcConnMgr::Subscribe(int cmdID,
     return LLBC_OK;
 }
 
-void RpcConnMgr::Unsubscribe(int cmdID) { packet_delegs_.erase(cmdID); }
+void RpcConnMgr::Unsubscribe(int cmdID) {
+    if (packet_delegs_.find(cmdID) != packet_delegs_.end()) packet_delegs_.erase(cmdID);
+}
 
 int RpcConnMgr::BlockingRecvPacket(llbc::LLBC_Packet *&recvPacket) {
     int count = 0;
