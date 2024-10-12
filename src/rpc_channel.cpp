@@ -68,7 +68,7 @@ void RpcChannel::CallMethod(
     // store coroutine context
     RpcCoroMgr::GetInst().AddCoroContext({
         .coro_uid = seq,
-        .timeout_time = llbc::LLBC_GetMicroSeconds() + RpcCoroMgr::CORO_TIME_OUT,
+        .timeout_time = llbc::LLBC_GetMilliSeconds() + RpcCoroMgr::CORO_TIME_OUT,
         .handle = std::coroutine_handle<RpcCoro::promise_type>::from_address(
             rpcController->GetCoroHandle()),
         .rsp = response,
