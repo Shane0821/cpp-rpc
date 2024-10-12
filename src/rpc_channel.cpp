@@ -159,11 +159,11 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
 
     PkgHead pkg_head;
     ret = pkg_head.FromPacket(*recvPacket);
-    COND_RET_ELOG(ret != LLBC_OK, , "BlockingCallMethod: parse net packet failed|ret:%d",
-                  ret);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(recvPacket);
+                  , "BlockingCallMethod: parse net packet failed|ret:%d", ret);
     ret = recvPacket->Read(*response);
-    COND_RET_ELOG(ret != LLBC_OK, , "BlockingCallMethod: read recv_packet failed|ret:%d",
-                  ret);
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(recvPacket);
+                  , "BlockingCallMethod: read recv_packet failed|ret:%d", ret);
 
     LLOG_TRACE("BlockingCallMethod: recved: %s|extdata:%lu",
                response->ShortDebugString().c_str(), pkg_head.seq);
