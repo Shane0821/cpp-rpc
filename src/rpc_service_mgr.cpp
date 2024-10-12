@@ -110,6 +110,13 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
         "HandleRpcRsp: coro context not found|seq_id:%lu|service_name:%s|method_name:%s|",
         coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
 
+    COND_RET_ELOG(
+        ctx.controller == nullptr, ,
+        "HandleRpcRsp: controller is nullptr|seq_id:%lu|service_name:%s|method_name:%s|");
+
+    COND_RET_ELOG(ctx.controller->UseCoro() == false, ,
+                  "HandleRpcRsp: controller is blocking controller");
+
     // failed due to other reasons
     if (packet.GetStatus() != LLBC_OK) {
         ctx.controller->SetFailed("rpc failed");
@@ -125,7 +132,7 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
 
     // no response, just resume the coro
     if (!ctx.rsp) {
-        LLOG_INFO("HandleRpcRsp: ctx does have rsp");
+        LLOG_INFO("HandleRpcRsp: ctx doesn't have rsp");
         ctx.handle.resume();
         LLOG_INFO("HandleRpcRsp: coro is done|%u", ctx.handle.done());
         return;
