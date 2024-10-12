@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "echo.pb.h"
 #include "echo_service_stub.h"
 #include "polaris.h"
@@ -21,19 +23,19 @@ class EchoClient : public RpcClient {
             co_return;
         }
 
-        RpcController *cntl = new RpcController(true);
+        std::unique_ptr<RpcController> cntl = std::make_unique<RpcController>(true);
+
         cntl->SetCoroHandle(co_await GetHandleAwaiter{});
 
         EchoServiceStub stub(channel);
 
         req.set_msg("Hello, Echo.");
         LLOG_INFO("EchoClient rpc echo call: msg:%s", req.msg().c_str());
-        co_await stub.Echo(cntl, &req, &rsp, nullptr);
+        co_await stub.Echo(cntl.get(), &req, &rsp, nullptr);
         LLOG_INFO("Recv Echo Rsp, status:%s, rsp:%s",
                   cntl->Failed() ? cntl->ErrorText().c_str() : "success",
                   rsp.msg().c_str());
 
-        delete cntl;
         co_return;
     }
 
@@ -49,17 +51,15 @@ class EchoClient : public RpcClient {
             return;
         }
 
-        RpcController *cntl = new RpcController(false);
+        std::unique_ptr<RpcController> cntl = std::make_unique<RpcController>(false);
         EchoServiceStub stub(channel);
 
         req.set_msg("Hello, Echo.");
         LLOG_INFO("EchoClient rpc echo call: msg:%s", req.msg().c_str());
-        stub.Echo(cntl, &req, &rsp, nullptr);
+        stub.Echo(cntl.get(), &req, &rsp, nullptr);
         LLOG_INFO("Recv Echo Rsp, status:%s, rsp:%s",
                   cntl->Failed() ? cntl->ErrorText().c_str() : "success",
                   rsp.msg().c_str());
-
-        delete cntl;
     }
 };
 
