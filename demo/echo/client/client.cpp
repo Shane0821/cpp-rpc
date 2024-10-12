@@ -73,8 +73,12 @@ int main() {
     client.SetLogConfPath(CLIENT_LLOG_CONF_PATH.c_str());
 
     LLOG_TRACE("CallMeathod Start");
-    client.BlockingCallMethod();
+    client.CallMethod();
     LLOG_TRACE("CallMeathod return");
+    sleep(20);
 
+    // LLOG_TRACE("BlockingCallMethod Start");
+    // client.BlockingCallMethod();
+    // LLOG_TRACE("BlockingCallMethod return");
     return 0;
 }
