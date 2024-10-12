@@ -75,7 +75,9 @@ int main() {
     LLOG_TRACE("CallMeathod Start");
     client.CallMethod();
     LLOG_TRACE("CallMeathod return");
-    sleep(20);
+    for (int i = 0; i < 20000; i++) {
+        client.Update();
+    }
 
     // LLOG_TRACE("BlockingCallMethod Start");
     // client.BlockingCallMethod();
