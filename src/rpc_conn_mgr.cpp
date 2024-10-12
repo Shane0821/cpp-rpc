@@ -85,20 +85,17 @@ int RpcConnMgr::CloseSession(int sessionID) {
 }
 
 void RpcConnMgr::Tick() noexcept {
-    llbc::LLBC_Packet *packet = llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
-    if (!packet) {
-        LLOG_ERROR("Acquire packet from ojbect pool failed");
-        return;
-    }
-    while (RecvPacket(*packet) == LLBC_OK) {
+    llbc::LLBC_Packet *packet = nullptr;
+    while (RecvPacket(packet) == LLBC_OK) {
         LLOG_TRACE("Tick: RecvPacket");
         auto it = packet_delegs_.find(packet->GetOpcode());
         if (it == packet_delegs_.end())
             LLOG_ERROR("Recv Untapped opcode:%d", packet->GetOpcode());
-        else
+        else {
             (it->second)(*packet);  // handle rep or handle rsp
+            LLBC_Recycle(packet);
+        }
     }
-    LLBC_Recycle(packet);
 }
 
 int RpcConnMgr::Subscribe(int cmdID,
@@ -110,7 +107,7 @@ int RpcConnMgr::Subscribe(int cmdID,
 
 void RpcConnMgr::Unsubscribe(int cmdID) { packet_delegs_.erase(cmdID); }
 
-int RpcConnMgr::BlockingRecvPacket(llbc::LLBC_Packet &recvPacket) {
+int RpcConnMgr::BlockingRecvPacket(llbc::LLBC_Packet *&recvPacket) {
     int count = 0;
     while (RecvPacket(recvPacket) != LLBC_OK && count < RECEIVE_TIME_OUT) {
         llbc::LLBC_Sleep(1);

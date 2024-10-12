@@ -22,7 +22,7 @@ int RpcChannel::PkgHead::FromPacket(llbc::LLBC_Packet &packet) noexcept {
 }
 
 int RpcChannel::PkgHead::ToPacket(llbc::LLBC_Packet &packet) const noexcept {
-    int ret = packet.Write(static_cast<std::uint32_t>(seq));
+    int ret = packet.Write(seq);
     COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.seq failed|ret: %d", ret);
     ret = packet.Write(service_name);
     COND_RET_ELOG(ret != LLBC_OK, ret, "write pkg_head.service_name failed|ret: %d", ret);
@@ -102,7 +102,7 @@ void RpcChannel::CallMethod(
     LLOG_DEBUG("CallMethod: send data|message: %s|packet: %s",
                request->ShortDebugString().c_str(), sendPacket->ToString().c_str());
     // send packet via conn_mgr
-    ret = RpcConnMgr::GetInst().SendPacket(*sendPacket);
+    ret = RpcConnMgr::GetInst().SendPacket(sendPacket);
     COND_RET_ELOG(ret != LLBC_OK,
                   RpcCoroMgr::GetInst().KillCoro(seq, "sendPacket failed"),
                   "CallMethod: sendPacket failed, ret: %s", llbc::LLBC_FormatLastError());
@@ -140,19 +140,15 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
     LLOG_DEBUG("BlockingCallMethod: send data|packet: %s",
                sendPacket->ToString().c_str());
     // send packet via conn_mgr
-    ret = RpcConnMgr::GetInst().SendPacket(*sendPacket);
+    ret = RpcConnMgr::GetInst().SendPacket(sendPacket);
     COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("sendPacket failed"),
                   "BlockingCallMethod: sendPacket failed, ret: %s",
                   llbc::LLBC_FormatLastError());
 
     LLOG_TRACE("BlockingCallMethod: Packet sent. Waiting!");
 
-    auto recvPacket = llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
-    COND_RET_ELOG(recvPacket == nullptr,
-                  controller->SetFailed("acquire LLBC_Packet failed"),
-                  "BlockingCallMethod: acquire LLBC_Packet failed");
-
-    if (conn_mgr_->BlockingRecvPacket(*recvPacket) == LLBC_FAILED) {
+    llbc::LLBC_Packet *recvPacket = nullptr;
+    if (conn_mgr_->BlockingRecvPacket(recvPacket) == LLBC_FAILED) {
         LLOG_ERROR("BlockingCallMethod: receive packet timeout!");
         controller->SetFailed("receive packet timeout");
         return;

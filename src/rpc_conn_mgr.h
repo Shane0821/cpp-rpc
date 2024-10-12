@@ -34,15 +34,15 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
     void Unsubscribe(int cmdID);
 
     // add packet to send queue
-    int SendPacket(llbc::LLBC_Packet &sendPacket) noexcept {
+    int SendPacket(llbc::LLBC_Packet *sendPacket) noexcept {
         return comp_->PushSendPacket(sendPacket);
     }
     // get packet from recv queue
-    int RecvPacket(llbc::LLBC_Packet &recvPacket) noexcept {
+    int RecvPacket(llbc::LLBC_Packet *&recvPacket) noexcept {
         return comp_->PopRecvPacket(recvPacket);
     }
     // block and wait for packet in recv queue
-    int BlockingRecvPacket(llbc::LLBC_Packet &recvPacket);
+    int BlockingRecvPacket(llbc::LLBC_Packet *&recvPacket);
 
     // Handle rpc data packets. The main loop should call this function.
     void Tick() noexcept;

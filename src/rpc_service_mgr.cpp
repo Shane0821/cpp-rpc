@@ -155,7 +155,6 @@ void RpcServiceMgr::OnRpcDone(
         delete req;
         delete rsp;
         delete controller;
-        LLBC_Recycle(packet);
     };
 
     COND_RET_ELOG(
@@ -178,6 +177,8 @@ void RpcServiceMgr::OnRpcDone(
     ret = packet->Write(*rsp);
     COND_RET_ELOG(ret != 0, cleanUp(), "OnRpcDone: packet.Write failed|ret:%d", ret);
 
-    conn_mgr_->SendPacket(*packet);
+    LLOG_TRACE("OnRpcDone: packet: %s", packet->ToString().c_str());
+
+    conn_mgr_->SendPacket(packet);
     cleanUp();
 }

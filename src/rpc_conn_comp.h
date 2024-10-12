@@ -19,15 +19,15 @@ class RpcConnComp : public llbc::LLBC_Component {
     virtual void OnProtoReport(const llbc::LLBC_ProtoReport &report);
 
     // push send packet
-    int PushSendPacket(llbc::LLBC_Packet &sendPacket) noexcept;
+    int PushSendPacket(llbc::LLBC_Packet *sendPacket) noexcept;
     // pop recv packet
-    int PopRecvPacket(llbc::LLBC_Packet &recvPacket) noexcept;
+    int PopRecvPacket(llbc::LLBC_Packet *&recvPacket) noexcept;
     // callback when recv packet
     void OnRecvPacket(llbc::LLBC_Packet &packet) noexcept;
 
     static constexpr int MAX_QUEUE_SIZE = 4096;
 
    private:
-    SPSCQueue<llbc::LLBC_Packet, MAX_QUEUE_SIZE> sendQueue_;
-    SPSCQueue<llbc::LLBC_Packet, MAX_QUEUE_SIZE> recvQueue_;
+    SPSCQueue<llbc::LLBC_Packet *, MAX_QUEUE_SIZE> sendQueue_;
+    SPSCQueue<llbc::LLBC_Packet *, MAX_QUEUE_SIZE> recvQueue_;
 };

@@ -35,13 +35,8 @@ void RpcConnComp::OnProtoReport(const llbc::LLBC_ProtoReport &report) {
 }
 
 void RpcConnComp::OnUpdate() {
-    llbc::LLBC_Packet *sendPacket =
-        llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
-    if (!sendPacket) {
-        LLOG_ERROR("OnUpdate: acquire packet from ojbect pool failed");
-        return;
-    }
-    while (sendQueue_.pop(*sendPacket)) {
+    llbc::LLBC_Packet *sendPacket = nullptr;
+    while (sendQueue_.pop(sendPacket)) {
         LLOG_TRACE("OnUpdate: sendPacket: %s", sendPacket->ToString().c_str());
         auto ret = GetService()->Send(sendPacket);
         if (ret != LLBC_OK) {
@@ -52,15 +47,19 @@ void RpcConnComp::OnUpdate() {
 
 void RpcConnComp::OnRecvPacket(llbc::LLBC_Packet &packet) noexcept {
     LLOG_TRACE("OnRecvPacket: %s", packet.ToString().c_str());
-    recvQueue_.emplace(packet);
+    llbc::LLBC_Packet *recvPacket =
+        llbc::LLBC_GetObjectFromUnsafetyPool<llbc::LLBC_Packet>();
+    recvPacket->SetHeader(packet, packet.GetOpcode(), 0);
+    recvPacket->SetPayload(packet.DetachPayload());
+    recvQueue_.emplace(recvPacket);
 }
 
-int RpcConnComp::PushSendPacket(llbc::LLBC_Packet &sendPacket) noexcept {
+int RpcConnComp::PushSendPacket(llbc::LLBC_Packet *sendPacket) noexcept {
     if (sendQueue_.emplace(sendPacket)) return LLBC_OK;
     return LLBC_FAILED;
 }
 
-int RpcConnComp::PopRecvPacket(llbc::LLBC_Packet &recvPacket) noexcept {
+int RpcConnComp::PopRecvPacket(llbc::LLBC_Packet *&recvPacket) noexcept {
     if (recvQueue_.pop(recvPacket)) return LLBC_OK;
     return LLBC_FAILED;
 }
