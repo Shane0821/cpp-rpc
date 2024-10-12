@@ -15,7 +15,7 @@ void EchoServiceImpl::Echo(::google::protobuf::RpcController *controller,
                            const ::echo::EchoRequest *request,
                            ::echo::EchoResponse *response,
                            ::google::protobuf::Closure *done) {
-    // LLBC_Sleep(11000); // timeout test
+    // LLBC_Sleep(11000);  // timeout test
     LLOG_INFO("received, msg:%s\n", request->msg().c_str());
     response->set_msg(std::string(" Echo >>>>>>> ") + request->msg());
     done->Run();
