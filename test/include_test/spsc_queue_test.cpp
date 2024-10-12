@@ -34,6 +34,17 @@ TEST(SPSCQueueTest, Pop) {
     }
     Item item;
     ASSERT_FALSE(q.pop(item));
+
+    for (int i = 0; i < 1023; ++i) {
+        q.emplace(i, i + 1);
+    }
+    for (int i = 0; i < 1023; ++i) {
+        Item item;
+        ASSERT_TRUE(q.pop(item));
+        ASSERT_EQ(item.a, i);
+        ASSERT_EQ(item.b, i + 1);
+    }
+    ASSERT_FALSE(q.pop(item));
 }
 
 TEST(SPSCQueueTest, Size) {
