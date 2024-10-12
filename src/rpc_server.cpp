@@ -5,7 +5,6 @@
 #include <csignal>
 
 #include "rpc_conn_mgr.h"
-#include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
 
 RpcServer::~RpcServer() { Stop(); }
