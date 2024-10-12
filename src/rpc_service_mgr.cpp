@@ -103,16 +103,15 @@ void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
     auto coro_uid = static_cast<RpcCoroMgr::coro_uid_type>(pkg_head.seq);
     auto ctx = RpcCoroMgr::GetInst().PopCoroContext(coro_uid);
 
-    COND_RET_ELOG(ctx.controller == nullptr, , "HandleRpcRsp: controller is nullptr");
-    COND_RET_ELOG(ctx.controller->UseCoro() == false, ,
-                  "HandleRpcRsp: controller is blocking controller");
-
     // the coro context is already removed
     // the coro is already killed
-    COND_RET_WLOG(ctx.handle == nullptr, ,
+    COND_RET_WLOG(ctx.handle == nullptr || ctx.controller == nullptr, ,
                   "HandleRpcRsp: coro context not found (possibly due to "
                   "timeout)|seq_id:%lu|service_name:%s|method_name:%s|",
                   coro_uid, pkg_head.service_name.c_str(), pkg_head.method_name.c_str());
+
+    COND_RET_ELOG(ctx.controller->UseCoro() == false, ,
+                  "HandleRpcRsp: controller is blocking controller");
 
     // failed due to other reasons
     if (packet.GetStatus() != LLBC_OK) {
