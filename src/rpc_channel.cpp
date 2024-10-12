@@ -77,9 +77,7 @@ void RpcChannel::CallMethod(
 
     llbc::LLBC_Packet *sendPacket =
         llbc::LLBC_GetObjectFromSafetyPool<llbc::LLBC_Packet>();
-    COND_RET_ELOG(sendPacket == nullptr,
-                  RpcCoroMgr::GetInst().KillCoro(seq, "Acquire LLBC_Packet failed"),
-                  "CallMethod: acquire LLBC_Packet failed");
+    COND_RET_ELOG(sendPacket == nullptr, , "CallMethod: acquire LLBC_Packet failed");
 
     sendPacket->SetHeader(session_ID_, RpcOpCode::RpcReq, LLBC_OK);
 
@@ -90,21 +88,18 @@ void RpcChannel::CallMethod(
     pkgHead.seq = seq;
 
     int ret = pkgHead.ToPacket(*sendPacket);
-    COND_RET_ELOG(ret != LLBC_OK,
-                  RpcCoroMgr::GetInst().KillCoro(seq, "pkg_head.ToPacket failed"),
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(sendPacket),
                   "CallMethod: pkg_head.ToPacket failed|ret: %d", ret);
 
     ret = sendPacket->Write(*request);
-    COND_RET_ELOG(ret != LLBC_OK,
-                  RpcCoroMgr::GetInst().KillCoro(seq, "packet.Write message failed"),
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(sendPacket),
                   "CallMethod: packet.Write message failed|ret: %d", ret);
 
     LLOG_DEBUG("CallMethod: send data|message: %s|packet: %s",
                request->ShortDebugString().c_str(), sendPacket->ToString().c_str());
     // send packet via conn_mgr
     ret = RpcConnMgr::GetInst().SendPacket(sendPacket);
-    COND_RET_ELOG(ret != LLBC_OK,
-                  RpcCoroMgr::GetInst().KillCoro(seq, "sendPacket failed"),
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(sendPacket),
                   "CallMethod: sendPacket failed, ret: %s", llbc::LLBC_FormatLastError());
     LLOG_TRACE("Packet sent. Waiting!");
 }
@@ -128,11 +123,11 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
     pkgHead.seq = 0;
 
     int ret = pkgHead.ToPacket(*sendPacket);
-    COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("pkg_head.ToPacket failed"),
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(sendPacket),
                   "BlockingCallMethod: pkg_head.ToPacket failed|ret: %d", ret);
 
     ret = sendPacket->Write(*request);
-    COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("packet.Write message failed"),
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(sendPacket),
                   "BlockingCallMethod: packet.Write message failed|ret: %d", ret);
 
     LLOG_DEBUG("BlockingCallMethod: send data|message: %s",
@@ -141,7 +136,7 @@ void RpcChannel::BlockingCallMethod(const ::google::protobuf::MethodDescriptor *
                sendPacket->ToString().c_str());
     // send packet via conn_mgr
     ret = RpcConnMgr::GetInst().SendPacket(sendPacket);
-    COND_RET_ELOG(ret != LLBC_OK, controller->SetFailed("sendPacket failed"),
+    COND_RET_ELOG(ret != LLBC_OK, LLBC_Recycle(sendPacket),
                   "BlockingCallMethod: sendPacket failed, ret: %s",
                   llbc::LLBC_FormatLastError());
 
