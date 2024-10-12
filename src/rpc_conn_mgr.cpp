@@ -6,7 +6,7 @@
 RpcConnMgr::~RpcConnMgr() noexcept {
     if (svc_) {
         svc_->Stop();
-        delete svc_;
+        svc_ = nullptr;
     }
 }
 
