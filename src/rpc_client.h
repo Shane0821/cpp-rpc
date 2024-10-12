@@ -24,6 +24,8 @@ class RpcClient {
     int SetLogConfPath(const char *log_conf_path);
     RpcChannel *RegisterRpcChannel(const char *ip, int port);
 
+    void Update();
+
     /**
      * Call a method using coroutines.
      * You should rewrite this method to call the remote method. Example:

@@ -5,6 +5,7 @@
 #include <csignal>
 
 #include "rpc_conn_mgr.h"
+#include "rpc_coro_mgr.h"
 #include "rpc_service_mgr.h"
 
 void RpcClient::SignalHandler(int signum) {
@@ -92,4 +93,10 @@ RpcChannel *RpcClient::RegisterRpcChannel(const char *ip, int port) {
         return nullptr;
     }
     return RpcServiceMgr::GetInst().RegisterRpcChannel(ip, port);
+}
+
+void RpcClient::Update() {
+    RpcCoroMgr::GetInst().HandleCoroTimeout();
+    RpcConnMgr::GetInst().Tick();
+    llbc::LLBC_Sleep(1);
 }

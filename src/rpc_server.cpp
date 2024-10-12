@@ -80,9 +80,7 @@ void RpcServer::Serve() {
     LLOG_TRACE("START LOOP");
 
     while (!stop_) {
-        RpcCoroMgr::GetInst().HandleCoroTimeout();
-        RpcConnMgr::GetInst().Tick();
-        llbc::LLBC_Sleep(1);
+        RpcClient::Update();
     }
 
     LLOG_INFO(">>> RPC SERVER STOP SERVING <<<");
