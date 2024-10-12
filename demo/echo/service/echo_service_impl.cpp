@@ -2,6 +2,8 @@
 
 #include <llbc.h>
 
+#include <memory>
+
 #include "echo_service_stub.h"
 #include "polaris.h"
 #include "rpc_channel.h"
@@ -40,9 +42,10 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
     }
 
     EchoServiceStub stub(channel);
-    RpcController *inner_controller = new RpcController(true);
+    std::unique_ptr<RpcController> inner_controller =
+        std::make_unique<RpcController>(true);
     inner_controller->SetCoroHandle(co_await GetHandleAwaiter{});
-    co_await stub.Echo(controller, &innerReq, &innerRsp, nullptr);
+    co_await stub.Echo(inner_controller.get(), &innerReq, &innerRsp, nullptr);
 
     LLOG_INFO(
         "InnerCallEcho: recv rsp. status:%s, rsp:%s\n",
@@ -51,7 +54,6 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
     if (inner_controller->Failed()) {
         controller->SetFailed(inner_controller->ErrorText());
     }
-    delete inner_controller;
     rsp->set_msg(innerRsp.msg());
     done->Run();
     co_return;
