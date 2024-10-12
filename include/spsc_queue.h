@@ -5,7 +5,7 @@
 #include <memory>
 
 // Simple lock-free single-producer single-consumer queue
-template <typename T, int Capacity>
+template <typename T, size_t Capacity>
 class SPSCQueue : private std::allocator<T> {
    public:
     SPSCQueue() {
@@ -17,7 +17,10 @@ class SPSCQueue : private std::allocator<T> {
     SPSCQueue &operator=(const SPSCQueue &) = delete;
 
     ~SPSCQueue() {
-        std::destroy(data_, data_ + Capacity);
+        for (size_t i = head_.load(std::memory_order_acquire);
+             i != tail_.load(std::memory_order_acquire); i = (i + 1) % Capacity) {
+            std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + i);
+        }
         std::allocator_traits<std::allocator<T>>::deallocate(*this, data_, Capacity);
     }
 
@@ -27,13 +30,13 @@ class SPSCQueue : private std::allocator<T> {
         static_assert(std::is_constructible<T, Args &&...>::value,
                       "T must be constructible with Args&&...");
 
-        int t = tail_.load(std::memory_order_relaxed);
+        size_t t = tail_.load(std::memory_order_relaxed);
         if ((t + 1) % Capacity == head_.load(std::memory_order_acquire)) {  // (1)
             return false;
         }
 
-        std::construct_at(data_ + t, std::forward<Args>(args)...);
-
+        std::allocator_traits<std::allocator<T>>::construct(*this, data_ + t,
+                                                            std::forward<Args>(args)...);
         // (2) synchronizes with (3)
         tail_.store((t + 1) % Capacity, std::memory_order_release);  // (2)
         return true;
@@ -43,19 +46,18 @@ class SPSCQueue : private std::allocator<T> {
         static_assert(std::is_nothrow_destructible<T>::value,
                       "T must be nothrow destructible");
 
-        int h = head_.load(std::memory_order_relaxed);
+        size_t h = head_.load(std::memory_order_relaxed);
         if (h == tail_.load(std::memory_order_acquire)) {  // (3)
             return false;
         }
         result = std::move(data_[h]);
-
-        std::destroy_at(data_ + h);
+        std::allocator_traits<std::allocator<T>>::destroy(*this, data_ + h);
         head_.store((h + 1) % Capacity, std::memory_order_release);  // (4)
         return true;
     }
 
-    int size() const noexcept {
-        int diff =
+    size_t size() const noexcept {
+        size_t diff =
             tail_.load(std::memory_order_acquire) - head_.load(std::memory_order_acquire);
         if (diff < 0) {
             diff += Capacity;
@@ -70,8 +72,8 @@ class SPSCQueue : private std::allocator<T> {
 
    private:
     T *data_;  // queue data
-    std::atomic<int> head_{0};
-    std::atomic<int> tail_{0};
+    std::atomic<size_t> head_{0};
+    std::atomic<size_t> tail_{0};
 };
 
 #endif  // _SPSC_QUEUE_H
