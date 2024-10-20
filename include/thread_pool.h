@@ -85,20 +85,20 @@ decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args) {
 
     // critical section
     {
-        std::unique_lock<std::mutex> lock(queue_mutex);
+        std::unique_lock<std::mutex> lock(queue_mutex_);
 
         // avoid add new thread if theadpool is destroyed
-        if (stop) throw std::runtime_error("enqueue on stopped ThreadPool");
+        if (stop_) throw std::runtime_error("enqueue on stopped ThreadPool");
 
         // add thread to queue
         // use lambda function to wrap the task
         // return type is void, no parameter
         // capture copies the task, ref count +1
-        tasks.emplace([task] { (*task)(); });
+        tasks_.emplace([task] { (*task)(); });
     }
 
     // notify a wait thread
-    condition.notify_one();
+    condition_.notify_one();
     return res;
 }
 
