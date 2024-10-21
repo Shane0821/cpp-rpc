@@ -29,7 +29,10 @@ class RpcCoro {
         auto yield_value() noexcept { return std::suspend_always{}; }
     };
 
-    explicit RpcCoro(handle_type h) : coro_handle_(h) {}
+    RpcCoro(handle_type h) : coro_handle_(h) {}
+    ~RpcCoro() {
+        if (coro_handle_) coro_handle_.destroy();
+    }
     RpcCoro(RpcCoro const&) = delete;
     RpcCoro& operator=(RpcCoro const&) = delete;
     RpcCoro(RpcCoro&& rhs) : coro_handle_(rhs.coro_handle_) {
@@ -57,7 +60,7 @@ class RpcCoro {
 
 struct GetHandleAwaiter {
     bool await_ready() const noexcept { return false; }
-    
+
     bool await_suspend(std::coroutine_handle<RpcCoro::promise_type> handle) {
         handle_ = handle.address();
         return false;  // Immediate resumption after suspension.
