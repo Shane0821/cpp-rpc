@@ -31,6 +31,7 @@ class RpcCoro {
 
     explicit RpcCoro(handle_type h) : coro_handle_(h) {}
     RpcCoro(RpcCoro const&) = delete;
+    RpcCoro& operator=(RpcCoro const&) = delete;
     RpcCoro(RpcCoro&& rhs) : coro_handle_(rhs.coro_handle_) {
         rhs.coro_handle_ = nullptr;
     }
