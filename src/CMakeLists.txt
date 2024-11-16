@@ -7,4 +7,4 @@ aux_source_directory(${SRC_DIR}/zk ZK)
 aux_source_directory(${SRC_DIR} SRC)
 target_sources(rpc PRIVATE ${SRC} ${ZK})
 
-target_link_libraries(rpc libprotobuf.a libllbc.so zookeeper_mt.so zookeeper_st.so pthread)
+target_link_libraries(rpc libprotobuf.a libllbc.so ${libzk} pthread)
