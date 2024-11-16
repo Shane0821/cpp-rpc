@@ -49,6 +49,8 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
 
     bool IsServer() { return is_server_; }
 
+    std::string GetIP() { return ip_; }
+
     static constexpr int RECEIVE_TIME_OUT = 10000;
 
    protected:
@@ -57,6 +59,7 @@ class RpcConnMgr : public Singleton<RpcConnMgr> {
    private:
     llbc::LLBC_Service *svc_ = nullptr;  // llbc service
     RpcConnComp *comp_ = nullptr;        // connection component
+    std::string ip_ = "";                // server listen ip
     bool is_server_ = false;             // is server or client
     int server_sessionID_ = 0;           // server session id
     std::unordered_map<int, llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>>

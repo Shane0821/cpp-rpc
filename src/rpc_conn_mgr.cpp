@@ -65,6 +65,7 @@ int RpcConnMgr::StartRpcService(const char *ip, int port) noexcept {
     COND_RET_ELOG(server_sessionID_ == 0, LLBC_FAILED,
                   "Create session failed, reason: %s", llbc::LLBC_FormatLastError())
     is_server_ = true;
+    ip_ = std::string(ip) + ":" + std::to_string(port);
     return LLBC_OK;
 }
 
