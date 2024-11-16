@@ -1,4 +1,6 @@
-﻿#include "zk_cpp.h"
+﻿#define THREADED
+
+#include "zk_cpp.h"
 
 #include <zookeeper/zookeeper.h>
 
