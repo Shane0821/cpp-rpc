@@ -63,7 +63,7 @@ void RpcServer::Stop() {
 }
 
 void RpcServer::AddService(::google::protobuf::Service *service) {
-    if (!RpcServiceMgr::GetInst().AddService(service)) {
+    if (RpcServiceMgr::GetInst().AddService(service) != LLBC_OK) {
         LLOG_ERROR("AddService: add service failed");
     }
 }
