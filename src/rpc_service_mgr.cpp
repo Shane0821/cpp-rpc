@@ -36,9 +36,12 @@ int RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
         auto *method_desc = service_desc->method(i);
         service_methods_[service_desc->name()][method_desc->name()] =
             ServiceInfo{service, method_desc};
+        // register service to zookeeper
+        auto ret = registry_->RegisterService(
+            service_desc->name() + "." + method_desc->name(), conn_mgr_->GetIP());
+        COND_RET(ret != LLBC_OK, ret);
     }
-    // register method to registry
-    return registry_->RegisterService(service_desc->name(), conn_mgr_->GetIP());
+    return LLBC_OK;
 }
 
 RpcChannel *RpcServiceMgr::RegisterRpcChannel(const char *ip, int port) noexcept {
