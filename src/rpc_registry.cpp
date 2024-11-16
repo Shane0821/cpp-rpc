@@ -43,7 +43,7 @@ int RpcRegistry::InitServices(const std::string &service_name) {
             LLOG_INFO("Child_change_events, path[%s] new_child_count[%d]", path.c_str(),
                       (int32_t)children.size());
             for (int i = 0; i < children.size(); i++) {
-                LLOG_INFO("Child[%d]: %s", i, children[i]);
+                LLOG_INFO("Child[%d]: %s", i, children[i].c_str());
             }
         },
         &services);
