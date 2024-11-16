@@ -19,6 +19,7 @@ int RpcServiceMgr::Init(RpcConnMgr *conn_mgr) noexcept {
                              llbc::LLBC_Delegate<void(llbc::LLBC_Packet &)>(
                                  this, &RpcServiceMgr::HandleRpcRsp));
     }
+    registry_ = std::make_unique<RpcRegistry>("127.0.0.1:2181");
     return LLBC_OK;
 }
 
@@ -29,14 +30,15 @@ RpcServiceMgr::~RpcServiceMgr() {
     }
 }
 
-bool RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
+int RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
     const auto *service_desc = service->GetDescriptor();
     for (int i = 0; i < service_desc->method_count(); ++i) {
         auto *method_desc = service_desc->method(i);
         service_methods_[service_desc->name()][method_desc->name()] =
             ServiceInfo{service, method_desc};
     }
-    return true;
+    // register method to registry
+    return registry_->RegisterService(service_desc->name(), conn_mgr_->GetIP());
 }
 
 RpcChannel *RpcServiceMgr::RegisterRpcChannel(const char *ip, int port) noexcept {

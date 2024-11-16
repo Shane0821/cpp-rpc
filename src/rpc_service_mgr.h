@@ -8,6 +8,7 @@
 #include <singleton.h>
 
 #include "rpc_channel.h"
+#include "rpc_registry.h"
 
 class RpcController;
 class RpcConnMgr;
@@ -26,7 +27,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     int Init(RpcConnMgr *conn_mgr) noexcept;
 
     // add an user implemented service
-    bool AddService(::google::protobuf::Service *service) noexcept;
+    int AddService(::google::protobuf::Service *service) noexcept;
 
     // register rpc channel. if channel already exists, return it directly.
     RpcChannel *RegisterRpcChannel(const char *, int port) noexcept;
@@ -46,6 +47,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
         std::pair<::google::protobuf::Message *, ::google::protobuf::Message *>) noexcept;
 
     RpcConnMgr *conn_mgr_ = nullptr;
+    std::unique_ptr<RpcRegistry> registry_;
     std::unordered_map<std::string, std::unordered_map<std::string, ServiceInfo>>
         service_methods_;  // service_name -> method_name -> service_info
     std::unordered_map<std::string, RpcChannel *> channels_;  // ip:port -> channel
