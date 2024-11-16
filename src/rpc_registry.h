@@ -1,7 +1,7 @@
 #ifndef _RPC_REGISTRY_H_
 #define _RPC_REGISTRY_H_
 
-#include "zk/zk_cpp.h"
+#include "zk/zk_cpp.h" // TODO: check
 
 class RpcRegistry {
    public:
@@ -13,8 +13,10 @@ class RpcRegistry {
     static ServiceAddr ParseServiceAddr(const std::string &service_name,
                                         const std::string &path);
 
-    RpcRegistry(const std::string &zk_target);
+    RpcRegistry() : client_(std::make_unique<utility::zk_cpp>()) {};
     ~RpcRegistry() {};
+
+    int Connect(const std::string &url);
 
     int RegisterService(const std::string &service_name, const std::string &addr);
     int InitServices(const std::string &service_name);
