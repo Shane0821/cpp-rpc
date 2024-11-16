@@ -2,9 +2,11 @@
 
 #include "rpc_macros.h"
 
-RpcRegistry::RpcRegistry(const std::string &zk_target) {
-    client_ = std::make_unique<utility::zk_cpp>();
-    client_->connect(zk_target);
+int RpcRegistry::Connect(const std::string &url) {
+    auto ret = client_->connect(url);
+    COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED,
+                  "RpcRegistry Connect failed, url: %s", url.c_str());
+    return LLBC_OK;
 }
 
 int RpcRegistry::RegisterService(const std::string &service_name,
