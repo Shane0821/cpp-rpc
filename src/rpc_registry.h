@@ -1,7 +1,7 @@
 #ifndef _RPC_REGISTRY_H_
 #define _RPC_REGISTRY_H_
 
-#include "zk/zk_cpp.h" // TODO: check
+#include "zk/zk_cpp.h"  // TODO: check
 
 class RpcRegistry {
    public:
@@ -25,7 +25,8 @@ class RpcRegistry {
 
    private:
     std::unique_ptr<utility::zk_cpp> client_;
-    std::vector<std::string> services;
+    std::unordered_map<std::string, std::vector<std::string>>
+        services;  // service_name -> service_addrs
 };
 
 #endif  // _RPC_REGISTRY_H_
