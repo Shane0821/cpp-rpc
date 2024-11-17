@@ -10,7 +10,7 @@ class RpcRegistry {
         int port = 0;
     };
 
-    static ServiceAddr ParseServiceAddr(const std::string &service_name,
+    static ServiceAddr ParseServiceAddr(const std::string &svc_md,
                                         const std::string &path);
 
     RpcRegistry() : client_(std::make_unique<utility::zk_cpp>()) {};
@@ -18,15 +18,15 @@ class RpcRegistry {
 
     int Connect(const std::string &url);
 
-    int RegisterService(const std::string &service_name, const std::string &addr);
-    int InitServices(const std::string &service_name);
+    int RegisterService(const std::string &svc_md, const std::string &addr);
+    int InitServices(const std::string &svc_md);
 
-    ServiceAddr GetRandomService(const std::string &service_name);
+    ServiceAddr GetRandomService(const std::string &svc_md);
 
    private:
     std::unique_ptr<utility::zk_cpp> client_;
     std::unordered_map<std::string, std::vector<std::string>>
-        services;  // service_name -> service_addrs
+        services;  // svc_md -> service_addrs
 };
 
 #endif  // _RPC_REGISTRY_H_
