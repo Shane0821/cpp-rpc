@@ -2,7 +2,6 @@
 
 #include "echo.pb.h"
 #include "echo_service_stub.h"
-#include "polaris.h"
 #include "rpc_client.h"
 #include "rpc_controller.h"
 
@@ -15,10 +14,7 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcChannel *channel =
-            RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.RelayEcho"].ip,
-                               polaris::NameRegistry["echo.EchoService.RelayEcho"].port);
-
+        RpcChannel *channel = RegisterRpcChannel("EchoService.RelayEcho");
         if (!channel) {
             co_return;
         }
@@ -44,9 +40,7 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcChannel *channel =
-            RegisterRpcChannel(polaris::NameRegistry["echo.EchoService.RelayEcho"].ip,
-                               polaris::NameRegistry["echo.EchoService.RelayEcho"].port);
+        RpcChannel *channel = RegisterRpcChannel("EchoService.RelayEcho");
         if (!channel) {
             return;
         }

@@ -22,7 +22,7 @@ class RpcClient {
     void Destroy() noexcept;
 
     int SetLogConfPath(const char *log_conf_path);
-    RpcChannel *RegisterRpcChannel(const char *ip, int port);
+    RpcChannel *RegisterRpcChannel(const std::string &);
 
     void Update();
 

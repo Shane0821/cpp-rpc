@@ -24,7 +24,7 @@ class RpcServer : public RpcClient, public Singleton<RpcServer> {
 
     int Init() noexcept;
 
-    RpcChannel *RegisterRpcChannel(const char *ip, int port);
+    RpcChannel *RegisterRpcChannel(const std::string &);
     int Listen(const char *ip, int port);
     void Stop();
     void Serve();

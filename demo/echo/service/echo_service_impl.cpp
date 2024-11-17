@@ -5,7 +5,6 @@
 #include <memory>
 
 #include "echo_service_stub.h"
-#include "polaris.h"
 #include "rpc_channel.h"
 #include "rpc_controller.h"
 #include "rpc_coro.h"
@@ -32,8 +31,7 @@ RpcCoro InnerCallEcho(::google::protobuf::RpcController *controller,
     LLOG_INFO("call, msg:%s", innerReq.msg().c_str());
     echo::EchoResponse innerRsp;
 
-    static auto addr = polaris::NameRegistry["echo.EchoService.Echo"];
-    RpcChannel *channel = RpcServiceMgr::GetInst().RegisterRpcChannel(addr.ip, addr.port);
+    RpcChannel *channel = RpcServiceMgr::GetInst().RegisterRpcChannel("EchoService.Echo");
     if (!channel) {
         LLOG_ERROR("InnerCallEcho: CreateRpcChannel for ReplayEcho failed.");
         controller->SetFailed("CreateRpcChannel for ReplayEcho Fail");

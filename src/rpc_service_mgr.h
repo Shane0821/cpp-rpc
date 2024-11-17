@@ -30,7 +30,7 @@ class RpcServiceMgr : public Singleton<RpcServiceMgr> {
     int AddService(::google::protobuf::Service *service) noexcept;
 
     // register rpc channel. if channel already exists, return it directly.
-    RpcChannel *RegisterRpcChannel(const char *, int port) noexcept;
+    RpcChannel *RegisterRpcChannel(const std::string &) noexcept;
 
    protected:
     RpcServiceMgr() = default;

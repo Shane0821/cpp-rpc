@@ -87,12 +87,12 @@ void RpcClient::Destroy() noexcept {
     std::cout << "RpcClient destroyed.\n";
 }
 
-RpcChannel *RpcClient::RegisterRpcChannel(const char *ip, int port) {
+RpcChannel *RpcClient::RegisterRpcChannel(const std::string &svc_md) {
     if (!initialized_) {
         std::cout << "RpcClient not initialized.\n";
         return nullptr;
     }
-    return RpcServiceMgr::GetInst().RegisterRpcChannel(ip, port);
+    return RpcServiceMgr::GetInst().RegisterRpcChannel(svc_md);
 }
 
 void RpcClient::Update() {

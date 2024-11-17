@@ -24,12 +24,12 @@ int RpcServer::Init() noexcept {
     return LLBC_OK;
 }
 
-RpcChannel *RpcServer::RegisterRpcChannel(const char *ip, int port) {
+RpcChannel *RpcServer::RegisterRpcChannel(const std::string &svc_md) {
     if (stop_) {
         std::cout << "RpcServer not started.\n";
         return nullptr;
     }
-    return RpcServiceMgr::GetInst().RegisterRpcChannel(ip, port);
+    return RpcServiceMgr::GetInst().RegisterRpcChannel(svc_md);
 }
 
 int RpcServer::Listen(const char *ip, int port) {
