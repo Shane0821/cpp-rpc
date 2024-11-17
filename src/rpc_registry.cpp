@@ -37,7 +37,7 @@ int RpcRegistry::InitServices(const std::string &service_name) {
     auto ret = client_->get_children(service_name.c_str(), children, false);
     COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED,
                   "InitServices failed, service_name: %s", service_name.c_str());
-    services = children;
+    services[service_name] = children;
 
     ret = client_->watch_children_event(
         service_name.c_str(),
@@ -48,7 +48,7 @@ int RpcRegistry::InitServices(const std::string &service_name) {
                 LLOG_INFO("Child[%d]: %s", i, children[i].c_str());
             }
         },
-        &services);
+        &services[service_name]);
     COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED,
                   "InitServices failed, failed to set watcher, service_name: %s",
                   service_name.c_str());
@@ -75,5 +75,5 @@ RpcRegistry::ServiceAddr RpcRegistry::GetRandomService(const std::string &servic
         return {};
     }
     auto idx = rand() % services.size();
-    return ParseServiceAddr(service_name, services[idx]);
+    return ParseServiceAddr(service_name, services[service_name][idx]);
 }
