@@ -57,7 +57,7 @@ RpcRegistry::ServiceAddr RpcRegistry::ParseServiceAddr(const std::string &svc_md
     // remove svc_md prefix
     auto tmp = path.substr(svc_md.size() + 1);
     // parse ip:port
-    auto pos = tmp.find('/');
+    auto pos = tmp.find('.');
     if (pos == std::string::npos) {
         return {};
     }
