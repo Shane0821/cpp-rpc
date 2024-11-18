@@ -9,25 +9,21 @@ int RpcRegistry::Connect(const std::string &url) {
     return LLBC_OK;
 }
 
-int RpcRegistry::RegisterService(const std::string &svc_md,
-                                 const std::string &addr) {
+int RpcRegistry::RegisterService(const std::string &svc_md, const std::string &addr) {
     std::vector<utility::zoo_acl_t> acl;
     acl.push_back(utility::zk_cpp::create_world_acl(utility::zoo_perm_all));
-    auto ret = client_->create_ephemeral_node(svc_md.c_str(), "", acl);
-    COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED,
-                  "RegisterService failed, svc_md: %s, addr: %s",
-                  svc_md.c_str(), addr.c_str());
-    COND_RET_ELOG(ret != utility::z_node_exists, LLBC_FAILED,
-                  "RegisterService failed, svc_md: %s, addr: %s",
-                  svc_md.c_str(), addr.c_str());
-
-    ret = client_->create_ephemeral_node((svc_md + "/" + addr).c_str(), "", acl);
+    auto path = "/" + svc_md;
+    auto ret = client_->create_ephemeral_node(path.c_str(), "", acl);
+    COND_RET_ELOG(ret != utility::z_node_exists && ret != utility::z_ok, LLBC_FAILED,
+                  "RegisterService failed, svc_md: %s, addr: %s", svc_md.c_str(),
+                  addr.c_str());
+    ret = client_->create_ephemeral_node((path + "/" + addr).c_str(), "", acl);
     COND_RET_ELOG(ret == utility::z_node_exists, LLBC_FAILED,
                   "RegisterService failed, addr exsists, svc_md: %s, addr: %s",
                   svc_md.c_str(), addr.c_str());
     COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED,
-                  "RegisterService failed, svc_md: %s, addr: %s",
-                  svc_md.c_str(), addr.c_str());
+                  "RegisterService failed, svc_md: %s, addr: %s", svc_md.c_str(),
+                  addr.c_str());
 
     return LLBC_OK;
 }
@@ -35,8 +31,8 @@ int RpcRegistry::RegisterService(const std::string &svc_md,
 int RpcRegistry::InitServices(const std::string &svc_md) {
     std::vector<std::string> children;
     auto ret = client_->get_children(svc_md.c_str(), children, false);
-    COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED,
-                  "InitServices failed, svc_md: %s", svc_md.c_str());
+    COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED, "InitServices failed, svc_md: %s",
+                  svc_md.c_str());
     services[svc_md] = children;
 
     ret = client_->watch_children_event(
@@ -61,7 +57,7 @@ RpcRegistry::ServiceAddr RpcRegistry::ParseServiceAddr(const std::string &svc_md
     // remove svc_md prefix
     auto tmp = path.substr(svc_md.size() + 1);
     // parse ip:port
-    auto pos = tmp.find(':');
+    auto pos = tmp.find('/');
     if (pos == std::string::npos) {
         return {};
     }
