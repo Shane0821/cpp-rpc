@@ -20,7 +20,7 @@ class RpcServer : public RpcClient, public Singleton<RpcServer> {
     friend class Singleton<RpcServer>;
 
    public:
-    ~RpcServer();
+    virtual ~RpcServer();
 
     int Init() noexcept;
 
