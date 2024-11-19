@@ -6,7 +6,7 @@
 class RpcRegistry {
    public:
     struct ServiceAddr {
-        const char *ip = nullptr;
+        std::string ip;
         int port = 0;
     };
 

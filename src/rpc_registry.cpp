@@ -28,14 +28,18 @@ int RpcRegistry::RegisterService(const std::string &svc_md, const std::string &a
 }
 
 int RpcRegistry::InitServices(const std::string &svc_md) {
+    if (services.find(svc_md) != services.end()) {
+        return LLBC_OK;
+    }
     std::vector<std::string> children;
-    auto ret = client_->get_children(svc_md.c_str(), children, false);
+    auto path = "/" + svc_md;
+    auto ret = client_->get_children(path.c_str(), children, false);
     COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED, "InitServices failed, svc_md: %s",
                   svc_md.c_str());
     services[svc_md] = children;
 
     ret = client_->watch_children_event(
-        svc_md.c_str(),
+        path.c_str(),
         [](const std::string &path, const std::vector<std::string> &children) {
             LLOG_INFO("Child_change_events, path[%s] new_child_count[%d]", path.c_str(),
                       (int32_t)children.size());
@@ -53,22 +57,26 @@ int RpcRegistry::InitServices(const std::string &svc_md) {
 
 RpcRegistry::ServiceAddr RpcRegistry::ParseServiceAddr(const std::string &svc_md,
                                                        const std::string &path) {
-    // remove svc_md prefix
-    auto tmp = path.substr(svc_md.size() + 1);
+    LLOG_INFO("ParseServiceAddr: svc_md: %s, path: %s", svc_md.c_str(), path.c_str());
     // parse ip:port
-    auto pos = tmp.find(':');
+    auto pos = path.find(':');
     if (pos == std::string::npos) {
         return {};
     }
-    auto ip = tmp.substr(0, pos);
-    auto port = std::stoi(tmp.substr(pos + 1));
-    return {ip.c_str(), port};
+    auto ip = path.substr(0, pos);
+    auto port = std::stoi(path.substr(pos + 1));
+    return {ip, port};
 }
 
 RpcRegistry::ServiceAddr RpcRegistry::GetRandomService(const std::string &svc_md) {
-    if (services.empty()) {
+    if (InitServices(svc_md) != LLBC_OK) {
         return {};
     }
-    auto idx = rand() % services.size();
+    if (services[svc_md].empty()) {
+        return {};
+    }
+    LLOG_INFO("GetRandomService: svc_md: %s, service_count: %d", svc_md.c_str(),
+              (int32_t)services[svc_md].size());
+    auto idx = rand() % services[svc_md].size();
     return ParseServiceAddr(svc_md, services[svc_md][idx]);
 }
