@@ -36,7 +36,7 @@ class RpcCoro {
     RpcCoro(RpcCoro&& rhs) : coro_handle_(rhs.coro_handle_) {
         rhs.coro_handle_ = nullptr;
     }
-    RpcCoro& operator=(RpcCoro&& other) noexcept {
+    decltype(auto) operator=(RpcCoro&& other) noexcept {
         if (this != &other) {
             if (coro_handle_) coro_handle_.destroy();
             coro_handle_ = other.coro_handle_;
