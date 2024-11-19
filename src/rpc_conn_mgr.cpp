@@ -8,6 +8,8 @@ RpcConnMgr::~RpcConnMgr() noexcept {
         svc_->Stop();
         svc_ = nullptr;
     }
+    Unsubscribe(RpcChannel::RpcOpCode::RpcReq);
+    Unsubscribe(RpcChannel::RpcOpCode::RpcRsp);
 }
 
 int RpcConnMgr::Init() noexcept {

@@ -23,12 +23,7 @@ int RpcServiceMgr::Init(RpcConnMgr *conn_mgr) noexcept {
     return registry_->Connect("127.0.0.1:2181");
 }
 
-RpcServiceMgr::~RpcServiceMgr() {
-    if (conn_mgr_) [[likely]] {
-        conn_mgr_->Unsubscribe(RpcChannel::RpcOpCode::RpcReq);
-        conn_mgr_->Unsubscribe(RpcChannel::RpcOpCode::RpcRsp);
-    }
-}
+RpcServiceMgr::~RpcServiceMgr() {}
 
 int RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
     const auto *service_desc = service->GetDescriptor();
