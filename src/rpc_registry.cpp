@@ -36,12 +36,15 @@ int RpcRegistry::InitServices(const std::string &svc_md) {
     auto ret = client_->get_children(path.c_str(), children, false);
     COND_RET_ELOG(ret != utility::z_ok, LLBC_FAILED, "InitServices failed, svc_md: %s",
                   svc_md.c_str());
+    for (int i = 0; i < children.size(); i++) {
+        LLOG_INFO("Child[%d]: %s", i, children[i].c_str());
+    }
     services[svc_md] = children;
 
     ret = client_->watch_children_event(
         path.c_str(),
         [](const std::string &path, const std::vector<std::string> &children) {
-            LLOG_INFO("Child_change_events, path[%s] new_child_count[%d]", path.c_str(),
+            LLOG_INFO("Child_change_events, path:%s, new_child_count:%d", path.c_str(),
                       (int32_t)children.size());
             for (int i = 0; i < children.size(); i++) {
                 LLOG_INFO("Child[%d]: %s", i, children[i].c_str());
