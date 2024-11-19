@@ -16,7 +16,7 @@
 class RpcClient {
    public:
     RpcClient() noexcept = default;
-    ~RpcClient() noexcept { Destroy(); }
+    virtual ~RpcClient() noexcept { Destroy(); }
 
     int Init() noexcept;
     void Destroy() noexcept;
