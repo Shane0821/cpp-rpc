@@ -49,10 +49,8 @@ int RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
 
 RpcChannel *RpcServiceMgr::RegisterRpcChannel(const std::string &svc_md) noexcept {
     auto [ip, port] = registry_->GetRandomService(svc_md);
-    if (ip == "" || port == 0) {
-        LLOG_ERROR("RegisterRpcChannel: service not found|svc_md:%s", svc_md.c_str());
-        return nullptr;
-    }
+    COND_RET_ELOG(ip == "" || port == 0, nullptr,
+                  "RegisterRpcChannel: service not found|svc_md:%s", svc_md.c_str());
     auto key = ip + ":" + std::to_string(port);
     if (auto it = channels_.find(key); it != channels_.end()) {
         return it->second;
@@ -106,6 +104,7 @@ void RpcServiceMgr::HandleRpcReq(llbc::LLBC_Packet &packet) noexcept {
 }
 
 void RpcServiceMgr::HandleRpcRsp(llbc::LLBC_Packet &packet) noexcept {
+    LLOG_TRACE("HandleRpcRsp: packet: %s", packet.ToString().c_str());
     RpcChannel::PkgHead pkg_head;
     int ret = pkg_head.FromPacket(packet);
     // this should not happen
