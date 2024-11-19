@@ -5,8 +5,6 @@
 #include "rpc_client.h"
 #include "rpc_controller.h"
 
-const char *SERVICE_NAME = "echo.EchoService.Echo";
-
 class EchoClient : public RpcClient {
    public:
     virtual RpcCoro CallMethod() override {

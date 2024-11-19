@@ -5,8 +5,6 @@
 #include "rpc_client.h"
 #include "rpc_controller.h"
 
-const char *SERVICE_NAME = "echo.EchoService.Echo";
-
 class EchoClient : public RpcClient {
    public:
     virtual RpcCoro CallMethod() override {
@@ -14,9 +12,7 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcChannel *channel =
-            RegisterRpcChannel("EchoService.Echo");
-
+        RpcChannel *channel = RegisterRpcChannel("EchoService.Echo");
         if (!channel) {
             co_return;
         }
@@ -42,8 +38,7 @@ class EchoClient : public RpcClient {
         echo::EchoRequest req;
         echo::EchoResponse rsp;
 
-        RpcChannel *channel =
-            RegisterRpcChannel("EchoService.Echo");
+        RpcChannel *channel = RegisterRpcChannel("EchoService.Echo");
         if (!channel) {
             return;
         }
