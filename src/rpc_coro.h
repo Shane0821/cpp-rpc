@@ -30,9 +30,7 @@ class RpcCoro {
     };
 
     RpcCoro(handle_type h) : coro_handle_(h) {}
-    ~RpcCoro() {
-        if (coro_handle_) coro_handle_.destroy();
-    }
+    ~RpcCoro() = default;
     RpcCoro(RpcCoro const&) = delete;
     RpcCoro& operator=(RpcCoro const&) = delete;
     RpcCoro(RpcCoro&& rhs) : coro_handle_(rhs.coro_handle_) {
@@ -49,13 +47,9 @@ class RpcCoro {
 
     void resume() { coro_handle_.resume(); }
     auto yield() { return coro_handle_.promise().yield_value(); }
-    void cancel() {
-        coro_handle_.destroy();
-        coro_handle_ = nullptr;
-    }
 
    private:
-    handle_type coro_handle_;
+    handle_type coro_handle_ = nullptr;
 };
 
 struct GetHandleAwaiter {
