@@ -64,9 +64,9 @@ int main() {
         path.substr(0, path.find_last_of("/\\")) + "/../../../config/client_log.cfg";
     client.SetLogConfPath(CLIENT_LLOG_CONF_PATH.c_str());
 
-    LLOG_TRACE("CallMeathod Start");
+    LLOG_TRACE("CallMethod Start");
     client.CallMethod();
-    LLOG_TRACE("CallMeathod return");
+    LLOG_TRACE("CallMethod return");
     for (int i = 0; i < 20000; i++) {
         client.Update();
     }
