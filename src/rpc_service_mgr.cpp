@@ -48,20 +48,20 @@ int RpcServiceMgr::AddService(::google::protobuf::Service *service) noexcept {
 
 RpcChannel *RpcServiceMgr::RegisterRpcChannel(const std::string &svc_md) noexcept {
     auto [ip, port] = registry_->GetRandomService(svc_md);
-    if (ip == nullptr) {
+    if (ip == "" || port == 0) {
         LLOG_ERROR("RegisterRpcChannel: service not found|svc_md:%s", svc_md.c_str());
         return nullptr;
     }
-    auto key = std::string(ip) + ":" + std::to_string(port);
-    auto it = channels_.find(key);
-    if (it != channels_.end()) {
+    auto key = ip + ":" + std::to_string(port);
+    if (auto it = channels_.find(key); it != channels_.end()) {
         return it->second;
     }
-    auto *channel = conn_mgr_->CreateRpcChannel(ip, port);
+    auto *channel = conn_mgr_->CreateRpcChannel(ip.c_str(), port);
     if (channel)
         channels_[key] = channel;
     else
-        LLOG_ERROR("RegisterRpcChannel: create channel failed|ip:%s|port:%d", ip, port);
+        LLOG_ERROR("RegisterRpcChannel: create channel failed|ip:%s|port:%d", ip.c_str(),
+                   port);
     return channel;
 }
 
