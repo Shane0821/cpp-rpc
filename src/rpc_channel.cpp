@@ -49,12 +49,11 @@ void RpcChannel::CallMethod(
     const ::google::protobuf::Message *request,
     ::google::protobuf::Message *response,  // handled by coroutine context
     ::google::protobuf::Closure *) {
-    response->Clear();
 
     LLOG_TRACE("CallMethod|service: %s|method: %s", method->service()->name().c_str(),
                method->name().c_str());
 
-    RpcController *rpcController = static_cast<RpcController *>(controller);
+    auto rpcController = static_cast<RpcController *>(controller);
     COND_RET_ELOG(rpcController == nullptr, ,
                   "CallMethod: controller is not RpcController");
 
