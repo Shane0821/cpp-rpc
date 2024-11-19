@@ -17,7 +17,7 @@ class EchoClient : public RpcClient {
             co_return;
         }
 
-        std::unique_ptr<RpcController> cntl = std::make_unique<RpcController>(true);
+        auto cntl = std::make_unique<RpcController>(true);
 
         cntl->SetCoroHandle(co_await GetHandleAwaiter{});
 
@@ -43,7 +43,7 @@ class EchoClient : public RpcClient {
             return;
         }
 
-        std::unique_ptr<RpcController> cntl = std::make_unique<RpcController>(false);
+        auto cntl = std::make_unique<RpcController>(false);
         EchoServiceStub stub(channel);
 
         req.set_msg("Hello, Echo.");
