@@ -49,7 +49,6 @@ void RpcChannel::CallMethod(
     const ::google::protobuf::Message *request,
     ::google::protobuf::Message *response,  // handled by coroutine context
     ::google::protobuf::Closure *) {
-
     LLOG_TRACE("CallMethod|service: %s|method: %s", method->service()->name().c_str(),
                method->name().c_str());
 
