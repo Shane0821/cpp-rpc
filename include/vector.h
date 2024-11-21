@@ -8,10 +8,9 @@ class Vector {
     // Default constructor
     Vector() noexcept : size_(0), capacity_(0), data_(nullptr) {}
 
-    Vector(size_t size) noexcept : size_(size), capacity_(size), data_(nullptr) {
-        static_assert(std::is_default_constructible<T>::value,
-                      "Type must be default constructible");
-
+    Vector(size_t size) noexcept
+        requires std::default_initializable<T>
+        : size_(size), capacity_(size), data_(nullptr) {
         data_ = alloc_.allocate(capacity_);
         std::__uninitialized_default_n(data_, size_);
     }
@@ -96,10 +95,9 @@ class Vector {
 
     // Construct an element in-place at the end of the vector
     template <typename... Args>
-    void emplace_back(Args&&... args) noexcept {
-        static_assert(std::is_constructible<T, Args...>::value,
-                      "Cannot construct element in-place with these arguments");
-
+    void emplace_back(Args&&... args) noexcept
+        requires std::constructible_from<T, Args...>
+    {
         if (size_ == capacity_) {
             // Increase capacity if full
             reserve(capacity_ == 0 ? 1 : capacity_ * 2);
