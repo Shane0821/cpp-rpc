@@ -1,3 +1,6 @@
+#ifndef _RPC_VECTOR_H
+#define _RPC_VECTOR_H
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -185,3 +188,5 @@ class Vector {
     T* data_;
     Alloc alloc_;
 };
+
+#endif  // _RPC_VECTOR_H
