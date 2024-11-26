@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <functional>
+#include <iostream>
 #include <thread>
 
 struct Item {
@@ -218,4 +220,66 @@ TEST(MPMCQueueTest, MPMC) {
     for (int i = 0; i < capacity - 1; ++i) {
         ASSERT_TRUE(vis[i]);
     }
+}
+
+class Logger {
+   public:
+    Logger() = default;
+
+    template <typename... Args>
+    void log(Args &&...args) {
+        auto f = [... args = std::forward<Args>(args)]() {
+            std::cout << "Logger: ";
+            (std::cout << ... << args);
+            std::cout << std::endl;
+        };
+
+        q_.emplace(std::move(f));
+    }
+
+    void print() {
+        std::function<void()> f;
+        q_.pop(f);
+        f();
+    }
+
+    bool empty() const noexcept { return q_.empty(); }
+
+   private:
+    MPMCQueue<std::function<void()>, 16> q_;
+};
+
+TEST(MPMCQueueTEST, MPSCLogger) {
+    Logger logger;
+
+    std::thread producer1([&] {
+        for (int i = 0; i < 16; ++i) {
+            logger.log(1, " Hello, ", i, " World!");
+        }
+    });
+
+    std::thread producer2([&] {
+        for (int i = 0; i < 16; ++i) {
+            logger.log(2, " Good, ", i, " Bye.");
+        }
+    });
+
+    std::thread producer3([&] {
+        for (int i = 0; i < 16; ++i) {
+            logger.log(3, " Far, ", i, " Well.");
+        }
+    });
+
+    std::thread consumer1([&] {
+        for (int i = 0; i < 48; ++i) {
+            logger.print();
+        }
+    });
+
+    producer1.join();
+    producer2.join();
+    producer3.join();
+    consumer1.join();
+
+    EXPECT_TRUE(logger.empty());
 }
