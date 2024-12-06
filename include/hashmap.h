@@ -218,206 +218,215 @@ class HashMap {
     Hash hash_function_;
 };
 
-// template <typename Key, typename Value>
-// class LockFreeHashMap {
-//    public:
-//     LockFreeHashMap(size_t initial_capacity = 16)
-//         : capacity(initial_capacity), size(0), resizing(false) {
-//         table = allocateTable(capacity);
-//     }
+template <typename Key, typename Value, typename Hash = std::hash<Key>>
+    requires std::default_initializable<Value>
+class ConcurrentHashMap {
+   public:
+    explicit HashMap(size_t capacity = 16, double load_factor = 0.75, Hash hash = Hash())
+        : capacity_(capacity), size_(0), load_factor_(load_factor), hash_function_(hash) {
+        if (capacity_ == 0) {
+            throw std::invalid_argument("Capacity must be greater than 0");
+        }
+        table_ = new Entry[capacity_];
+    }
 
-//     ~LockFreeHashMap() { delete[] table; }
+    // Copy constructor
+    HashMap(const HashMap& other)
+        : capacity_(other.capacity_),
+          size_(other.size_),
+          load_factor_(other.load_factor_),
+          hash_function_(other.hash_function_) {
+        table_ = new Entry[other.capacity_];
+        std::copy(other.table_, other.table_ + other.capacity_, table_);
+    }
 
-//     // Insert a key-value pair into the hash map
-//     bool insert(const Key& key, const Value& value) {
-//         while (true) {
-//             auto current_table = table;
+    // Move constructor
+    HashMap(HashMap&& other) noexcept
+        : capacity_(other.capacity_),
+          size_(other.size_),
+          load_factor_(other.load_factor_),
+          hash_function_(std::move(other.hash_function_)) {
+        table_ = other.table_;
+        other.table_ = nullptr;
+        other.size_ = 0;
+        other.capacity_ = 0;
+    }
 
-//             // If resizing is in progress, help with the resize
-//             if (resizing.load(std::memory_order_acquire)) {
-//                 helpResize();
-//                 continue;
-//             }
+    ~HashMap() { delete[] table_; }
 
-//             // Try to insert into the current table
-//             if (insertIntoTable(current_table, key, value)) {
-//                 // Check if resizing is needed
-//                 if (size.fetch_add(1, std::memory_order_relaxed) >=
-//                     capacity * load_factor) {
-//                     startResize();
-//                 }
-//                 return true;
-//             }
+    // Copy assignment operator
+    HashMap& operator=(const HashMap& other) {
+        if (this == &other) {
+            return *this;
+        }
 
-//             // If the table is full, trigger resizing
-//             startResize();
-//         }
-//     }
+        delete[] table_;
+        size_ = other.size_;
+        capacity_ = other.capacity_;
+        load_factor_ = other.load_factor_;
+        hash_function_ = other.hash_function_;
+        table_ = new Entry[capacity_];
+        std::copy(other.table_, other.table_ + other.capacity_, table_);
+        return *this;
+    }
 
-//     // Find the value associated with a key
-//     std::optional<Value> find(const Key& key) {
-//         auto current_table = table;
+    // Move assignment operator
+    HashMap& operator=(HashMap&& other) noexcept {
+        if (this == &other) {
+            return *this;
+        }
 
-//         // Look in the current table
-//         auto value = findInTable(current_table, key);
-//         if (value.has_value()) {
-//             return value;
-//         }
+        delete[] table_;
+        size_ = other.size_;
+        capacity_ = other.capacity_;
+        load_factor_ = other.load_factor_;
+        hash_function_ = std::move(other.hash_function_);
+        table_ = other.table_;
+        other.table_ = nullptr;
+        other.size_ = 0;
+        other.capacity_ = 0;
+        return *this;
+    }
 
-//         // If resizing is in progress, check the new table
-//         if (resizing.load(std::memory_order_acquire)) {
-//             auto new_table = resizing_table.load(std::memory_order_acquire);
-//             return findInTable(new_table, key);
-//         }
+    // Insert a key-value pair into the hashmap
+    void insert(const Key& key, const Value& value) {
+        if (needs_rehash()) {
+            rehash();
+        }
 
-//         return std::nullopt;
-//     }
+        auto idx = hash_function_(key) % capacity_;
+        while (table_[idx].occupied_) {
+            if (table_[idx].key == key) {
+                table_[idx].value = value;
+                return;
+            }
+            idx = (idx + 1) % capacity_;
+        }
 
-//     // Remove a key-value pair from the hash map
-//     bool remove(const Key& key) {
-//         while (true) {
-//             auto current_table = table;
+        table_[idx] = Entry(key, value);
+        ++size_;
+    }
 
-//             // If resizing is in progress, help with the resize
-//             if (resizing.load(std::memory_order_acquire)) {
-//                 helpResize();
-//                 continue;
-//             }
+    void insert(Key&& key, Value&& value) {
+        if (needs_rehash()) {
+            rehash();
+        }
 
-//             // Try to remove the key from the current table
-//             if (removeFromTable(current_table, key)) {
-//                 size.fetch_sub(1, std::memory_order_relaxed);
-//                 return true;
-//             }
+        auto idx = hash_function_(key) % capacity_;
+        while (table_[idx].occupied_) {
+            if (table_[idx].key_ == key) {
+                table_[idx].value_ = std::forward<Value>(value);
+                return;
+            }
+            idx = (idx + 1) % capacity_;
+        }
 
-//             return false;  // Key not found
-//         }
-//     }
+        table_[idx] = Entry(std::forward<Key>(key), std::forward<Value>(value));
+        ++size_;
+    }
 
-//    private:
-//     struct Entry {
-//         std::atomic<bool> occupied{false};
-//         Key key;
-//         Value value;
-//     };
+    // Remove a key-value pair by key
+    void erase(const Key& key) {
+        if (auto idx = find_index(key); idx.has_value()) {
+            table_[idx.value()].occupied_ = false;
+            --size_;
+            return;
+        }
 
-//     // Allocate a new table
-//     Entry* allocateTable(size_t capacity) {
-//         auto new_table = new Entry[capacity];
-//         for (size_t i = 0; i < capacity; ++i) {
-//             new_table[i].occupied.store(false, std::memory_order_relaxed);
-//         }
-//         return new_table;
-//     }
+        throw std::out_of_range("Key not found");
+    }
 
-//     // Hash function to map keys to indices
-//     size_t hashKey(const Key& key) const { return std::hash<Key>{}(key); }
+    // Check if the hashmap contains a key
+    bool contains(const Key& key) const { return find_index(key) != std::nullopt; }
 
-//     // Insert into a specific table
-//     bool insertIntoTable(Entry* table, const Key& key, const Value& value) {
-//         size_t index = hashKey(key) % capacity;
-//         for (size_t i = 0; i < capacity; ++i) {
-//             size_t probeIndex = (index + i) % capacity;
-//             Entry& entry = table[probeIndex];
+    // Get the number of elements in the hashmap
+    size_t size() const { return size_; }
 
-//             bool expected = false;
-//             if (entry.occupied.compare_exchange_strong(expected, true,
-//                                                        std::memory_order_acquire)) {
-//                 entry.key = key;
-//                 entry.value = value;
-//                 return true;
-//             }
+    // Get the capacity of the hashmap
+    size_t capacity() const { return capacity_; }
 
-//             // If the key matches, update the value
-//             if (entry.occupied.load(std::memory_order_acquire) && entry.key == key) {
-//                 entry.value = value;
-//                 return true;
-//             }
-//         }
-//         return false;  // Table is full
-//     }
+    // Check if the hashmap is empty
+    bool empty() const { return size_ == 0; }
 
-//     // Find in a specific table
-//     std::optional<Value> findInTable(Entry* table, const Key& key) {
-//         size_t index = hashKey(key) % capacity;
-//         for (size_t i = 0; i < capacity; ++i) {
-//             size_t probeIndex = (index + i) % capacity;
-//             Entry& entry = table[probeIndex];
+    [[nodiscard]] Value& operator[](const Key& key) {
+        if (auto idx = find_index(key); idx.has_value()) {
+            return table_[idx.value()].value_;
+        }
 
-//             if (!entry.occupied.load(std::memory_order_acquire)) {
-//                 return std::nullopt;  // Key not found
-//             }
+        if (needs_rehash()) {
+            rehash();
+        }
 
-//             if (entry.key == key) {
-//                 return entry.value;
-//             }
-//         }
-//         return std::nullopt;
-//     }
+        auto idx = hash_function_(key) % capacity_;
+        while (table_[idx].occupied_) {
+            idx = (idx + 1) % capacity_;
+        }
+        table_[idx] = Entry(key, Value{});
+        ++size_;
+        return table_[idx].value_;
+    }
 
-//     // Remove from a specific table
-//     bool removeFromTable(Entry* table, const Key& key) {
-//         size_t index = hashKey(key) % capacity;
-//         for (size_t i = 0; i < capacity; ++i) {
-//             size_t probeIndex = (index + i) % capacity;
-//             Entry& entry = table[probeIndex];
+   private:
+    struct Entry {
+        Key key_;
+        Value value_;
+        bool occupied_;
 
-//             if (!entry.occupied.load(std::memory_order_acquire)) {
-//                 return false;  // Key not found
-//             }
+        Entry() : occupied_(false) {}
+        Entry(const Key& k, const Value& v) : key_(k), value_(v), occupied_(true) {}
+        Entry(Key&& k, Value&& v)
+            : key_(std::move(k)), value_(std::move(v)), occupied_(true) {}
+    };
 
-//             if (entry.key == key) {
-//                 entry.occupied.store(false, std::memory_order_release);
-//                 return true;
-//             }
-//         }
-//         return false;
-//     }
+    // Check if rehashing is needed based on load factor
+    bool needs_rehash() const { return size_ >= capacity_ * load_factor_; }
 
-//     // Start resizing the table
-//     void startResize() {
-//         if (resizing.exchange(true, std::memory_order_acquire)) {
-//             return;  // Another thread is already resizing
-//         }
+    // Rehash the table when load factor threshold is reached
+    void rehash() {
+        auto new_capacity = capacity_ ? capacity_ * 2 : static_cast<size_t>(16);
+        auto new_table = new Entry[new_capacity];
+        for (size_t i = 0; i < capacity_; ++i) {
+            if (table_[i].occupied_) {
+                auto& entry = table_[i];
+                auto index = hash_function_(entry.key_) % new_capacity;
+                while (new_table[index].occupied_) {
+                    index = (index + 1) % new_capacity;
+                }
+                new_table[index] = entry;
+            }
+        }
+        delete[] table_;
+        table_ = new_table;
+        capacity_ = new_capacity;
+    }
 
-//         size_t new_capacity = capacity * 2;
-//         auto new_table = allocateTable(new_capacity);
+    // Find the index of a key in the table
+    std::optional<size_t> find_index(const Key& key) const {
+        if (table_ == nullptr) {
+            return std::nullopt;  // Table is empty
+        }
 
-//         resizing_table.store(new_table, std::memory_order_release);
+        size_t idx = hash_function_(key) % capacity_;
+        size_t start_idx = idx;
 
-//         // Migrate entries to the new table
-//         for (size_t i = 0; i < capacity; ++i) {
-//             Entry& entry = table[i];
-//             if (entry.occupied.load(std::memory_order_acquire)) {
-//                 insertIntoTable(new_table, entry.key, entry.value);
-//             }
-//         }
+        while (table_[idx].occupied_) {
+            if (table_[idx].key_ == key) {
+                return idx;
+            }
+            idx = (idx + 1) % capacity_;
+            if (idx == start_idx) {
+                break;
+            }
+        }
 
-//         // Replace the old table
-//         delete[] table;
-//         table = new_table;
-//         capacity = new_capacity;
+        return std::nullopt;  // Not found
+    }
 
-//         resizing.store(false, std::memory_order_release);
-//     }
-
-//     // Help with resizing
-//     void helpResize() {
-//         auto new_table = resizing_table.load(std::memory_order_acquire);
-//         for (size_t i = 0; i < capacity; ++i) {
-//             Entry& entry = table[i];
-//             if (entry.occupied.load(std::memory_order_acquire)) {
-//                 insertIntoTable(new_table, entry.key, entry.value);
-//             }
-//         }
-//     }
-
-//     size_t capacity;
-//     std::atomic<size_t> size;
-//     std::atomic<bool> resizing;
-//     Entry* table;
-//     std::atomic<Entry*> resizing_table;
-//     const float load_factor = 0.75;
-// };
+    Entry* table_ = nullptr;
+    size_t size_;
+    size_t capacity_;
+    double load_factor_;
+    Hash hash_function_;
+};
 
 #endif
