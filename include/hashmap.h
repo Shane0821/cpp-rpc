@@ -104,13 +104,13 @@ class HashMap {
         auto idx = hash_function_(key) % capacity_;
         while (table_[idx].occupied_) {
             if (table_[idx].key_ == key) {
-                table_[idx].value_ = std::forward<Value>(value);
+                table_[idx].value_ = std::move(value);
                 return;
             }
             idx = (idx + 1) % capacity_;
         }
 
-        table_[idx] = Entry(std::forward<Key>(key), std::forward<Value>(value));
+        table_[idx] = Entry(std::move(key), std::move(value));
         ++size_;
     }
 
