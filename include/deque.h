@@ -2,9 +2,14 @@
 #define _DEQUE_H
 
 #include <cstddef>
+#include <iostream>
 #include <memory>
 
+template <size_t CHUNK_SIZE>
+concept ValidChunkSize = (CHUNK_SIZE > 0);
+
 template <typename T, size_t CHUNK_SIZE = 128>
+    requires ValidChunkSize<CHUNK_SIZE>
 class Deque {
    public:
     struct DequeIterator {
@@ -14,13 +19,54 @@ class Deque {
 
         T** map_node_ = nullptr;  // pointer to the map node
 
-        void set_node(T** new_node) {
-            map_node_ = new_node;
-            first_ = *new_node;
-            last_ = first_ + CHUNK_SIZE;
+        DequeIterator() = default;
+
+        DequeIterator(const DequeIterator& other) noexcept {
+            cur_ = other.cur_;
+            first_ = other.first_;
+            last_ = other.last_;
+            map_node_ = other.map_node_;
         }
 
-        T& operator*() const { return *cur_; }
+        DequeIterator(DequeIterator&& other) noexcept {
+            cur_ = other.cur_;
+            first_ = other.first_;
+            last_ = other.last_;
+            map_node_ = other.map_node_;
+            other.cur_ = nullptr;
+            other.first_ = nullptr;
+            other.last_ = nullptr;
+            other.map_node_ = nullptr;
+        }
+
+        DequeIterator& operator=(const DequeIterator& other) noexcept {
+            if (this == &other) {
+                return *this;
+            }
+            cur_ = other.cur_;
+            first_ = other.first_;
+            last_ = other.last_;
+            map_node_ = other.map_node_;
+            return *this;
+        }
+
+        DequeIterator& operator=(DequeIterator&& other) noexcept {
+            if (this == &other) {
+                return *this;
+            }
+            cur_ = other.cur_;
+            first_ = other.first_;
+            last_ = other.last_;
+            map_node_ = other.map_node_;
+            other.cur_ = nullptr;
+            other.first_ = nullptr;
+            other.last_ = nullptr;
+            other.map_node_ = nullptr;
+            return *this;
+        }
+
+        T& operator*() noexcept { return *cur_; }
+        T* operator->() noexcept { return cur_; }
 
         // Overload prefix ++ operator
         DequeIterator& operator++() {
@@ -86,6 +132,14 @@ class Deque {
         T& operator[](size_t n) const { return *(*this + n); }
 
         bool operator==(const DequeIterator& rhs) const { return cur_ == rhs.cur_; }
+
+        bool operator!=(const DequeIterator& rhs) const { return !(*this == rhs); }
+
+        void set_node(T** new_node) {
+            map_node_ = new_node;
+            first_ = *new_node;
+            last_ = first_ + CHUNK_SIZE;
+        }
     };
 
     Deque(size_t n = 0, const T& val = {})
@@ -126,6 +180,8 @@ class Deque {
         start_.cur_ = start_.first_ + (other.start_.cur_ - other.start_.first_);
         finish_.set_node(new_finish);
         finish_.cur_ = finish_.first_ + (other.finish_.cur_ - other.finish_.first_);
+
+        // std::uninitialized_copy(other.begin(), other.end(), begin());
 
         // copy the elements between start and finish
         for (auto p = new_start + 1; p < new_finish; ++p) {
@@ -300,8 +356,26 @@ class Deque {
         ++start_;
     }
 
-    DequeIterator begin() { return start_; }
-    DequeIterator end() { return finish_; }
+    void erase(int pos) {
+        if (pos < 0 || pos >= size()) {
+            throw std::out_of_range("Deque subscript out of range");
+        }
+
+        auto it = begin() + pos;
+
+        if (pos < size() / 2) {
+            std::move_backward(begin(), it, it + 1);
+            pop_front();
+        } else {
+            std::move(it + 1, end(), it);
+            pop_back();
+        }
+    }
+
+    void erase(const DequeIterator& it) { erase(it - begin()); }
+
+    DequeIterator begin() const { return start_; }
+    DequeIterator end() const { return finish_; }
 
     T& front() { return *start_; }
     T& back() { return *(finish_ - 1); }

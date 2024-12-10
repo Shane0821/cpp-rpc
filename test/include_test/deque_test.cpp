@@ -288,3 +288,106 @@ TEST(DequeTest, MoveAssign) {
     ASSERT_EQ(deque.size(), 0);
     ASSERT_TRUE(deque.empty());
 }
+
+TEST(DequeTest, Erase) {
+    Deque<int, 4> deque;
+    for (int i = 0; i < 9; i++) {
+        deque.push_back(i + 1);
+    }
+    deque.erase(4);
+    // 1 2 3 4 6 7 8 9
+    ASSERT_EQ(deque.size(), 8);
+    ASSERT_EQ(deque[4], 6);
+    for (int i = 0; i < 4; i++) {
+        ASSERT_EQ(deque[i], i + 1);
+    }
+    for (int i = 4; i < 8; i++) {
+        ASSERT_EQ(deque[i], i + 2);
+    }
+
+    // 2 3 4 6 7 8 9
+    deque.erase(0);
+    ASSERT_EQ(deque.size(), 7);
+    ASSERT_EQ(deque[0], 2);
+    ASSERT_EQ(deque[1], 3);
+    ASSERT_EQ(deque[2], 4);
+    ASSERT_EQ(deque[3], 6);
+    ASSERT_EQ(deque[4], 7);
+    ASSERT_EQ(deque[5], 8);
+    ASSERT_EQ(deque[6], 9);
+
+    // 2 3 4 6 7 8
+    deque.erase(6);
+    ASSERT_EQ(deque.size(), 6);
+    ASSERT_EQ(deque[0], 2);
+    ASSERT_EQ(deque[1], 3);
+    ASSERT_EQ(deque[2], 4);
+    ASSERT_EQ(deque[3], 6);
+    ASSERT_EQ(deque[4], 7);
+    ASSERT_EQ(deque[5], 8);
+
+    // 2 3 6 7 8
+    deque.erase(2);
+    ASSERT_EQ(deque.size(), 5);
+    ASSERT_EQ(deque[0], 2);
+    ASSERT_EQ(deque[1], 3);
+    ASSERT_EQ(deque[2], 6);
+    ASSERT_EQ(deque[3], 7);
+    ASSERT_EQ(deque[4], 8);
+
+    for (int i = 0; i < 5; i++) {
+        deque.erase(0);
+    }
+    ASSERT_EQ(deque.size(), 0);
+    ASSERT_TRUE(deque.empty());
+}
+
+TEST(DequeTest, EraseDense) {
+    Deque<int, 8> deque;
+    for (int i = 0; i < 10000; i++) {
+        deque.push_back(i);
+    }
+    deque.erase(5111);
+    ASSERT_EQ(deque.size(), 9999);
+    ASSERT_EQ(deque[5111], 5112);
+    for (int i = 0; i < 5111; i++) {
+        ASSERT_EQ(deque[i], i);
+    }
+    for (int i = 5111; i < 9999; i++) {
+        ASSERT_EQ(deque[i], i + 1);
+    }
+
+    deque.erase(1000);
+    ASSERT_EQ(deque.size(), 9998);
+    ASSERT_EQ(deque[1000], 1001);
+    for (int i = 0; i < 1000; i++) {
+        ASSERT_EQ(deque[i], i);
+    }
+    for (int i = 1000; i < 5110; i++) {
+        ASSERT_EQ(deque[i], i + 1);
+    }
+    for (int i = 5110; i < 9998; i++) {
+        ASSERT_EQ(deque[i], i + 2);
+    }
+
+    deque.erase(8997);
+    ASSERT_EQ(deque.size(), 9997);
+    for (int i = 0; i < 1000; i++) {
+        ASSERT_EQ(deque[i], i);
+    }
+    for (int i = 1000; i < 5110; i++) {
+        ASSERT_EQ(deque[i], i + 1);
+    }
+    for (int i = 5110; i < 8997; i++) {
+        ASSERT_EQ(deque[i], i + 2);
+    }
+    for (int i = 8997; i < 9997; i++) {
+        ASSERT_EQ(deque[i], i + 3);
+    }
+
+    for (int i = 0; i < 9997; i++) {
+        deque.erase(9996 - i);
+    }
+    ASSERT_EQ(deque.size(), 0);
+    ASSERT_TRUE(deque.empty());
+}
