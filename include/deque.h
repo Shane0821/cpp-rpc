@@ -2,7 +2,6 @@
 #define _DEQUE_H
 
 #include <cstddef>
-#include <iostream>
 #include <memory>
 
 template <size_t CHUNK_SIZE>
