@@ -5,14 +5,20 @@
 TEST(StringTest, Constructor) {
     String s;
     EXPECT_EQ(s.size(), 0);
-    EXPECT_EQ(s.capacity(), 0);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_TRUE(s.empty());
 
     String s2("Hello, world!");
     EXPECT_EQ(s2.size(), 13);
-    EXPECT_EQ(s2.capacity(), 13);
+    EXPECT_EQ(s2.capacity(), 15);
     EXPECT_FALSE(s2.empty());
     EXPECT_STREQ(s2.c_str(), "Hello, world!");
+
+    String s3("Hello, world!!!!");
+    EXPECT_EQ(s3.size(), 16);
+    EXPECT_EQ(s3.capacity(), 16);
+    EXPECT_FALSE(s3.empty());
+    EXPECT_STREQ(s3.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, CopyConstructor) {
@@ -20,21 +26,39 @@ TEST(StringTest, CopyConstructor) {
     String s_copy = s;
     s.clear();
     EXPECT_EQ(s_copy.size(), 13);
-    EXPECT_EQ(s_copy.capacity(), 13);
+    EXPECT_EQ(s_copy.capacity(), 15);
     EXPECT_FALSE(s_copy.empty());
     EXPECT_STREQ(s_copy.c_str(), "Hello, world!");
+
+    String s2("Hello, world!!!!");
+    String s2_copy = s2;
+    s2.clear();
+    EXPECT_EQ(s2_copy.size(), 16);
+    EXPECT_EQ(s2_copy.capacity(), 16);
+    EXPECT_FALSE(s2_copy.empty());
+    EXPECT_STREQ(s2_copy.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, MoveConstructor) {
     String s("Hello, world!");
     String s_moved = std::move(s);
     EXPECT_EQ(s.size(), 0);
-    EXPECT_EQ(s.capacity(), 0);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s_moved.size(), 13);
-    EXPECT_EQ(s_moved.capacity(), 13);
+    EXPECT_EQ(s_moved.capacity(), 15);
     EXPECT_FALSE(s_moved.empty());
     EXPECT_STREQ(s_moved.c_str(), "Hello, world!");
+
+    String s2("Hello, world!!!!");
+    String s2_moved = std::move(s2);
+    EXPECT_EQ(s2.size(), 0);
+    EXPECT_EQ(s2.capacity(), 0);
+    EXPECT_TRUE(s2.empty());
+    EXPECT_EQ(s2_moved.size(), 16);
+    EXPECT_EQ(s2_moved.capacity(), 16);
+    EXPECT_FALSE(s2_moved.empty());
+    EXPECT_STREQ(s2_moved.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, CopyAssignment) {
@@ -43,9 +67,18 @@ TEST(StringTest, CopyAssignment) {
     s_copy = s;
     s.clear();
     EXPECT_EQ(s_copy.size(), 13);
-    EXPECT_EQ(s_copy.capacity(), 13);
+    EXPECT_EQ(s_copy.capacity(), 15);
     EXPECT_FALSE(s_copy.empty());
     EXPECT_STREQ(s_copy.c_str(), "Hello, world!");
+
+    String s2("Hello, world!!!!");
+    String s2_copy;
+    s2_copy = s2;
+    s2.clear();
+    EXPECT_EQ(s2_copy.size(), 16);
+    EXPECT_EQ(s2_copy.capacity(), 16);
+    EXPECT_FALSE(s2_copy.empty());
+    EXPECT_STREQ(s2_copy.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, MoveAssignment) {
@@ -53,19 +86,30 @@ TEST(StringTest, MoveAssignment) {
     String s_moved;
     s_moved = std::move(s);
     EXPECT_EQ(s.size(), 0);
-    EXPECT_EQ(s.capacity(), 0);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s_moved.size(), 13);
-    EXPECT_EQ(s_moved.capacity(), 13);
+    EXPECT_EQ(s_moved.capacity(), 15);
     EXPECT_FALSE(s_moved.empty());
     EXPECT_STREQ(s_moved.c_str(), "Hello, world!");
+
+    String s2("Hello, world!!!!");
+    String s2_moved;
+    s2_moved = std::move(s2);
+    EXPECT_EQ(s2.size(), 0);
+    EXPECT_EQ(s2.capacity(), 0);
+    EXPECT_TRUE(s2.empty());
+    EXPECT_EQ(s2_moved.size(), 16);
+    EXPECT_EQ(s2_moved.capacity(), 16);
+    EXPECT_FALSE(s2_moved.empty());
+    EXPECT_STREQ(s2_moved.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, Clear) {
     String s("Hello, world!");
     s.clear();
     EXPECT_EQ(s.size(), 0);
-    EXPECT_EQ(s.capacity(), 13);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_TRUE(s.empty());
 
     s.append("Goodbye, world!");
@@ -94,9 +138,15 @@ TEST(StringTest, Append) {
     String s("Hello, ");
     s.append("world!");
     EXPECT_EQ(s.size(), 13);
-    EXPECT_EQ(s.capacity(), 13);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_FALSE(s.empty());
     EXPECT_STREQ(s.c_str(), "Hello, world!");
+
+    s.append(" Goodbye, world!");
+    EXPECT_EQ(s.size(), 29);
+    EXPECT_EQ(s.capacity(), 29);
+    EXPECT_FALSE(s.empty());
+    EXPECT_STREQ(s.c_str(), "Hello, world! Goodbye, world!");
 }
 
 TEST(StringTest, PushBack) {
@@ -108,16 +158,34 @@ TEST(StringTest, PushBack) {
     s.push_back('d');
     s.push_back('!');
     EXPECT_EQ(s.size(), 13);
-    EXPECT_EQ(s.capacity(), 14);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_FALSE(s.empty());
     EXPECT_STREQ(s.c_str(), "Hello, world!");
+
+    s.push_back('!');
+    EXPECT_EQ(s.size(), 14);
+    EXPECT_EQ(s.capacity(), 15);
+    EXPECT_FALSE(s.empty());
+    EXPECT_STREQ(s.c_str(), "Hello, world!!");
+
+    s.push_back('!');
+    EXPECT_EQ(s.size(), 15);
+    EXPECT_EQ(s.capacity(), 15);
+    EXPECT_FALSE(s.empty());
+    EXPECT_STREQ(s.c_str(), "Hello, world!!!");
+
+    s.push_back('!');
+    EXPECT_EQ(s.size(), 16);
+    EXPECT_EQ(s.capacity(), 30);
+    EXPECT_FALSE(s.empty());
+    EXPECT_STREQ(s.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, PopBack) {
     String s("Hello, world!");
     s.pop_back();
     EXPECT_EQ(s.size(), 12);
-    EXPECT_EQ(s.capacity(), 13);
+    EXPECT_EQ(s.capacity(), 15);
     EXPECT_FALSE(s.empty());
     EXPECT_STREQ(s.c_str(), "Hello, world");
 }
@@ -140,17 +208,18 @@ TEST(StringTest, Reserve) {
 TEST(StringTest, Concatenation) {
     String s1("Hello, ");
     String s2("world!");
+
     String s3 = s1 + s2;
     EXPECT_EQ(s3.size(), 13);
-    EXPECT_EQ(s3.capacity(), 13);
+    EXPECT_EQ(s3.capacity(), 15);
     EXPECT_FALSE(s3.empty());
     EXPECT_STREQ(s3.c_str(), "Hello, world!");
 
-    String s4 = s1 + 'w';
-    EXPECT_EQ(s4.size(), 8);
-    EXPECT_EQ(s4.capacity(), 14);
+    String s4 = s3 + "!!!";
+    EXPECT_EQ(s4.size(), 16);
+    EXPECT_EQ(s4.capacity(), 16);
     EXPECT_FALSE(s4.empty());
-    EXPECT_STREQ(s4.c_str(), "Hello, w");
+    EXPECT_STREQ(s4.c_str(), "Hello, world!!!!");
 }
 
 TEST(StringTest, ConcatenationAssignment) {
@@ -158,15 +227,21 @@ TEST(StringTest, ConcatenationAssignment) {
     String s2("world!");
     s1 += s2;
     EXPECT_EQ(s1.size(), 13);
-    EXPECT_EQ(s1.capacity(), 13);
+    EXPECT_EQ(s1.capacity(), 15);
     EXPECT_FALSE(s1.empty());
     EXPECT_STREQ(s1.c_str(), "Hello, world!");
 
     s1 += '!';
     EXPECT_EQ(s1.size(), 14);
-    EXPECT_EQ(s1.capacity(), 26);
+    EXPECT_EQ(s1.capacity(), 15);
     EXPECT_FALSE(s1.empty());
     EXPECT_STREQ(s1.c_str(), "Hello, world!!");
+
+    s1 += " Goodbye, world!";
+    EXPECT_EQ(s1.size(), 30);
+    EXPECT_EQ(s1.capacity(), 30);
+    EXPECT_FALSE(s1.empty());
+    EXPECT_STREQ(s1.c_str(), "Hello, world!! Goodbye, world!");
 }
 
 TEST(StringTest, Comparison) {
