@@ -37,7 +37,8 @@ class ThreadPool {
 };
 
 // constructor initialize a fixed size of worker
-inline ThreadPool::ThreadPool(size_t threads) : stop_(false) {
+inline ThreadPool::ThreadPool(size_t threads = std::thread::hardware_concurrency())
+    : stop_(false) {
     // initialize worker
     for (size_t i = 0; i < threads; i++)
         workers_.emplace_back([this] {
