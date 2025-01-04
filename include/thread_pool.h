@@ -1,21 +1,14 @@
 #ifndef _THREAD_POOL_H
 #define _THREAD_POOL_H
 
-#include <condition_variable>  // std::condition_variable
-#include <functional>          // std::function, std::bind
-#include <future>              // std::future, std::packaged_task
-#include <memory>              // std::make_shared
-#include <mutex>               // std::mutex, std::unique_lock
-#include <queue>               // std::queue
-#include <stdexcept>           // std::runtime_error
-#include <thread>              // std::thread
-#include <utility>             // std::move, std::forward
-#include <vector>              // std::vector
+#include "scheduler.h"
 
+template <typename T>
 class ThreadPool {
    public:
     // initialize the number of concurrency threads
-    ThreadPool(size_t);
+    ThreadPool(std::unique_ptr<Scheduler<T>>,
+               size_t = std::thread::hardware_concurrency());
     // destroy thread pool and all created threads
     ~ThreadPool();
 
@@ -24,6 +17,8 @@ class ThreadPool {
     decltype(auto) enqueue(F&& f, Args&&... args);
 
    private:
+    std::unique_ptr<Scheduler<T>> scheduler_;
+
     // thread list, stores all threads
     std::vector<std::thread> workers_;
     // queue task, the type of queue elements are functions with void return type
@@ -37,8 +32,9 @@ class ThreadPool {
 };
 
 // constructor initialize a fixed size of worker
-inline ThreadPool::ThreadPool(size_t threads = std::thread::hardware_concurrency())
-    : stop_(false) {
+template <typename T>
+inline ThreadPool<T>::ThreadPool(std::unique_ptr<Scheduler<T>> scheduler, size_t threads)
+    : scheduler_(std::move(scheduler)), stop_(false) {
     // initialize worker
     for (size_t i = 0; i < threads; i++)
         workers_.emplace_back([this] {
@@ -73,8 +69,9 @@ inline ThreadPool::ThreadPool(size_t threads = std::thread::hardware_concurrency
 
 // Enqueue a new thread
 // use variadic templates and tail return type
+template <typename T>
 template <class F, class... Args>
-decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args) {
+decltype(auto) ThreadPool<T>::enqueue(F&& f, Args&&... args) {
     // deduce return type
     using return_type = std::result_of<F(Args...)>::type;
 
@@ -104,7 +101,8 @@ decltype(auto) ThreadPool::enqueue(F&& f, Args&&... args) {
 }
 
 // destroy everything
-inline ThreadPool::~ThreadPool() {
+template <typename T>
+inline ThreadPool<T>::~ThreadPool() {
     // critical section
     {
         std::unique_lock<std::mutex> lock(queue_mutex_);
