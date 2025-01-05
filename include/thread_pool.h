@@ -14,7 +14,7 @@ class ThreadPool {
 
     // enqueue new thread task
     template <class F, class... Args>
-    decltype(auto) enqueue(F&& f, Args&&... args);
+    decltype(auto) add(F&& f, Args&&... args);
 
    private:
     std::unique_ptr<Scheduler<T>> scheduler_;
@@ -45,7 +45,7 @@ inline ThreadPool<T>::ThreadPool(size_t threads) : scheduler_(std::make_unique<T
 // use variadic templates and tail return type
 template <typename T>
 template <class F, class... Args>
-inline decltype(auto) ThreadPool<T>::enqueue(F&& f, Args&&... args) {
+inline decltype(auto) ThreadPool<T>::add(F&& f, Args&&... args) {
     return scheduler_->add(std::forward<F>(f), std::forward<Args>(args)...);
 }
 
