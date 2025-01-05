@@ -22,7 +22,7 @@ class Scheduler {
                                           std::forward<Args>(args)...);
     }
 
-    std::function<void()> get() { return static_cast<T*>(this)->get(); }
+    bool execute() { return static_cast<T*>(this)->execute(); }
 
     void stop() { static_cast<T*>(this)->stop(); }
 };
@@ -59,7 +59,7 @@ class FIFOScheduler : public Scheduler<FIFOScheduler> {
         return res;
     }
 
-    std::function<void()> get() {
+    bool execute() {
         std::function<void()> task;
 
         // critical section
@@ -70,7 +70,7 @@ class FIFOScheduler : public Scheduler<FIFOScheduler> {
                             [this] { return this->stop_ || !this->tasks_.empty(); });
 
             // return if queue empty and task finished
-            if (stop_ && tasks_.empty()) return nullptr;
+            if (stop_ && tasks_.empty()) return false;
 
             // otherwise execute the first element of queue
             task = std::move(tasks_.front());
@@ -78,7 +78,8 @@ class FIFOScheduler : public Scheduler<FIFOScheduler> {
             tasks_.pop();
         }
 
-        return task;
+        task();
+        return true;
     }
 
     void stop() {
@@ -121,7 +122,7 @@ class LIFOScheduler : public Scheduler<LIFOScheduler> {
         return fut;
     }
 
-    std::function<void()> get() {
+    bool execute() {
         std::function<void()> task;
 
         // critical section
@@ -132,7 +133,7 @@ class LIFOScheduler : public Scheduler<LIFOScheduler> {
                             [this] { return this->stop_ || !this->tasks_.empty(); });
 
             // return if queue empty and task finished
-            if (stop_ && tasks_.empty()) return nullptr;
+            if (stop_ && tasks_.empty()) return false;
 
             // otherwise execute the first element of queue
             task = std::move(tasks_.top());
@@ -140,7 +141,8 @@ class LIFOScheduler : public Scheduler<LIFOScheduler> {
             tasks_.pop();
         }
 
-        return task;
+        task();
+        return true;
     }
 
     void stop() {

@@ -29,14 +29,9 @@ inline ThreadPool<T>::ThreadPool(size_t threads) : scheduler_(std::make_unique<T
     for (size_t i = 0; i < threads; i++)
         workers_.emplace_back([this] {
             for (;;) {
-                auto task = this->scheduler_->get();
-
-                if (task == nullptr) {
+                if (!this->scheduler_->execute()) {
                     break;
                 }
-
-                // execution
-                task();
             }
         });
 }
