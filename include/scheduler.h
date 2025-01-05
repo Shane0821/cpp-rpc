@@ -7,6 +7,7 @@
 #include <memory>              // std::make_shared
 #include <mutex>               // std::mutex, std::unique_lock
 #include <queue>               // std::queue
+#include <stack>               // std::stack
 #include <stdexcept>           // std::runtime_error
 #include <thread>              // std::thread
 #include <utility>             // std::move, std::forward
@@ -49,7 +50,7 @@ class FIFOScheduler : public Scheduler<FIFOScheduler> {
         // critical section
         {
             std::unique_lock<std::mutex> lock(queue_mutex_);
-            if (stop_) throw std::runtime_error("enqueue on stopped ThreadPool");
+            if (stop_) throw std::runtime_error("add on stopped scheduler");
             tasks_.emplace([task] { (*task)(); });
         }
 
@@ -63,7 +64,7 @@ class FIFOScheduler : public Scheduler<FIFOScheduler> {
 
         // critical section
         {
-            std::unique_lock<std::mutex> lock(this->queue_mutex_);
+            std::unique_lock<std::mutex> lock(queue_mutex_);
 
             condition_.wait(lock,
                             [this] { return this->stop_ || !this->tasks_.empty(); });
@@ -92,6 +93,68 @@ class FIFOScheduler : public Scheduler<FIFOScheduler> {
     // queue task, the type of queue elements are functions with void return type
     std::queue<std::function<void()>> tasks_;
     std::mutex queue_mutex_;
+    std::condition_variable condition_;
+    bool stop_;
+};
+
+class LIFOScheduler : public Scheduler<LIFOScheduler> {
+   public:
+    explicit LIFOScheduler() : stop_(false) {}
+
+    template <class F, class... Args>
+    decltype(auto) add(F&& f, Args&&... args) {
+        using return_type = std::result_of_t<F(Args...)>;
+
+        auto task = std::make_shared<std::packaged_task<return_type()>>(
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+
+        auto fut = task->get_future();
+
+        {
+            std::unique_lock<std::mutex> lock(stack_mutex_);
+            if (stop_) throw std::runtime_error("add on stopped scheduler");
+            tasks_.emplace([task] { (*task)(); });
+        }
+
+        condition_.notify_one();
+
+        return fut;
+    }
+
+    std::function<void()> get() {
+        std::function<void()> task;
+
+        // critical section
+        {
+            std::unique_lock<std::mutex> lock(stack_mutex_);
+
+            condition_.wait(lock,
+                            [this] { return this->stop_ || !this->tasks_.empty(); });
+
+            // return if queue empty and task finished
+            if (stop_ && tasks_.empty()) return nullptr;
+
+            // otherwise execute the first element of queue
+            task = std::move(tasks_.top());
+
+            tasks_.pop();
+        }
+
+        return task;
+    }
+
+    void stop() {
+        {
+            std::unique_lock<std::mutex> lock(stack_mutex_);
+            stop_ = true;
+        }
+        condition_.notify_all();
+    }
+
+   private:
+    // queue task, the type of queue elements are functions with void return type
+    std::stack<std::function<void()>> tasks_;
+    std::mutex stack_mutex_;
     std::condition_variable condition_;
     bool stop_;
 };
