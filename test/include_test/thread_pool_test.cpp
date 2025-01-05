@@ -13,7 +13,7 @@ TEST(ThreadPoolTest, FIFOThreadPool) {
         // add all task to result list
         results.emplace_back(
             // add print task to thread pool
-            pool.enqueue([i] {
+            pool.add([i] {
                 std::cout << "hello " << i << std::endl;
                 // wait a sec when the previous line is out
                 std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -39,7 +39,7 @@ TEST(ThreadPoolTest, LIFOThreadPool) {
         // add all task to result list
         results.emplace_back(
             // add print task to thread pool
-            pool.enqueue([i] {
+            pool.add([i] {
                 std::cout << "hello " << i << std::endl;
                 // wait a sec when the previous line is out
                 std::this_thread::sleep_for(std::chrono::seconds(1));
