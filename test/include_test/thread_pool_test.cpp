@@ -5,7 +5,7 @@
 #include <future>
 
 TEST(ThreadPoolTest, ThreadPool) {
-    ThreadPool pool(std::make_unique<Scheduler<FIFOScheduler>>(), 4);
+    ThreadPool<FIFOScheduler> pool(4);
     std::vector<std::future<std::string>> results;
 
     // start eight thread task

@@ -7,8 +7,8 @@ template <typename T>
 class ThreadPool {
    public:
     // initialize the number of concurrency threads
-    ThreadPool(std::unique_ptr<Scheduler<T>>,
-               size_t = std::thread::hardware_concurrency());
+    ThreadPool(size_t = std::thread::hardware_concurrency());
+
     // destroy thread pool and all created threads
     ~ThreadPool();
 
@@ -33,8 +33,8 @@ class ThreadPool {
 
 // constructor initialize a fixed size of worker
 template <typename T>
-inline ThreadPool<T>::ThreadPool(std::unique_ptr<Scheduler<T>> scheduler, size_t threads)
-    : scheduler_(std::move(scheduler)), stop_(false) {
+inline ThreadPool<T>::ThreadPool(size_t threads)
+    : scheduler_(std::make_unique<Scheduler<T>>()), stop_(false) {
     // initialize worker
     for (size_t i = 0; i < threads; i++)
         workers_.emplace_back([this] {
