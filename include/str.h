@@ -267,14 +267,12 @@ class String {
    private:
     void set_sso(const char* str, size_t len) {
         std::strcpy(sso_data_, str);  // Copy the string into SSO storage
-        sso_data_[len] = '\0';        // Null-terminate
         is_sso_ = true;               // Mark as SSO
     }
 
     void set_heap(const char* str, size_t len) {
         auto tmp = new char[len + 1];
         std::strcpy(tmp, str);  // Copy the string into heap storage
-        tmp[len] = '\0';        // Null-terminate
         heap_data_ = tmp;
         heap_size_ = len;
         heap_capacity_ = len;
