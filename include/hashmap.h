@@ -198,17 +198,18 @@ class HashMap {
         size_t idx = hash_function_(key) % capacity_;
         size_t start_idx = idx;
 
-        while (table_[idx].occupied_) {
-            if (table_[idx].key_ == key) {
-                return idx;
-            }
+        while (table_[idx].key_ != key) {
             idx = (idx + 1) % capacity_;
             if (idx == start_idx) {
-                break;
+                return std::nullopt;  // Key not found
             }
         }
 
-        return std::nullopt;  // Not found
+        if (table_[idx].occupied_) {
+            return idx; // Key found
+        }
+
+        return std::nullopt; // Key not found
     }
 
     Entry* table_ = nullptr;
