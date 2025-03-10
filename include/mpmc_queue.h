@@ -1,5 +1,5 @@
-#ifndef _SPSC_QUEUE_H
-#define _SPSC_QUEUE_H
+#ifndef _MPMC_QUEUE_H
+#define _MPMC_QUEUE_H
 
 #include <atomic>
 #include <memory>
@@ -77,4 +77,4 @@ class MPMCQueue : private std::allocator<T> {
     std::atomic<size_t> tail_{0};
 };
 
-#endif  // _SPSC_QUEUE_H
+#endif  // _MPMC_QUEUE_H
