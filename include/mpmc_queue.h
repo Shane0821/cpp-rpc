@@ -4,10 +4,8 @@
 #include <atomic>
 #include <memory>
 
-#define size_t uint64_t
-
 // multi-producer multi-consumer queue
-template <typename T, size_t Capacity>
+template <typename T, size_t Capacity = 65536>
 class MPMCQueue : private std::allocator<T> {
    public:
     MPMCQueue() noexcept {
