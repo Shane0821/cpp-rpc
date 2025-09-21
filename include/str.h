@@ -8,237 +8,172 @@
 
 class String {
    public:
-    String() {
-        sso_data_[0] = '\0';
-        is_sso_ = true;
-    }
-
-    String(const char* str) {
-        size_t len = std::strlen(str);  // Determine the length of the input string
-        if (len <= SSO_THRESHOLD) {
-            set_sso(str, len);
+    String(const char *ptr = "") {
+        int len = std::strlen(ptr);
+        if (len <= MIN_CAPACITY) {
+            set_stack_data(ptr, len);
         } else {
-            set_heap(str, len);
+            set_heap_data(ptr, len);
         }
     }
 
-    String(const String& other) {
-        if (other.is_sso_) {
-            set_sso(other.sso_data_, std::strlen(other.sso_data_));
+    String(const String &other) {
+        if (other.is_heap_) {
+            set_heap_data(other.heap_data_, other.size_);
         } else {
-            set_heap(other.heap_data_, other.heap_size_);
+            set_stack_data(other.stack_data_, other.size_);
         }
     }
 
-    String(String&& other) noexcept : is_sso_(other.is_sso_) {
-        if (other.is_sso_) {
-            std::strcpy(sso_data_, other.sso_data_);
-            other.sso_data_[0] = '\0';
-        } else {
-            heap_size_ = other.heap_size_;
-            heap_capacity_ = other.heap_capacity_;
+    String(String &&other) noexcept {
+        size_ = other.size_;
+        is_heap_ = other.is_heap_;
+        if (is_heap_) {
             heap_data_ = other.heap_data_;
-
-            other.heap_data_ = nullptr;
-            other.heap_size_ = 0;
-            other.heap_capacity_ = 0;
-        }
-    }
-
-    ~String() {
-        if (!is_sso_ && heap_data_) {
-            delete[] heap_data_;
-        }
-    }
-
-    String& operator=(const String& other) {
-        if (this == &other) {
-            return *this;
-        }
-
-        is_sso_ = other.is_sso_;
-
-        if (is_sso_) {
-            set_sso(other.sso_data_, std::strlen(other.sso_data_));
+            heap_capacity_ = other.heap_capacity_;
+            other.set_heap_data("", 0);
         } else {
-            if (heap_data_) {
-                delete[] heap_data_;
+            set_stack_data(other.stack_data_, other.size_);
+            other.set_stack_data("", 0);
+        }
+    }
+
+    ~String() { del_data(); }
+
+    String &operator=(const String &other) {
+        if (this != &other) {
+            del_data();
+            size_ = other.size_;
+            is_heap_ = other.is_heap_;
+            if (is_heap_) {
+                set_heap_data(other.heap_data_, other.size_);
+            } else {
+                set_stack_data(other.stack_data_, other.size_);
             }
-
-            set_heap(other.heap_data_, other.heap_size_);
         }
-
         return *this;
     }
 
-    String& operator=(String&& other) noexcept {
-        if (this == &other) {
-            return *this;
+    String &operator=(String &&other) noexcept {
+        if (this != &other) {
+            del_data();
+            size_ = other.size_;
+            is_heap_ = other.is_heap_;
+            if (is_heap_) {
+                heap_data_ = other.heap_data_;
+                heap_capacity_ = other.heap_capacity_;
+                other.set_heap_data("", 0);
+            } else {
+                set_stack_data(other.stack_data_, other.size_);
+                other.set_stack_data("", 0);
+            }
         }
-
-        is_sso_ = other.is_sso_;
-
-        if (is_sso_) {
-            std::strcpy(sso_data_, other.sso_data_);
-            other.sso_data_[0] = '\0';
-            return *this;
-        }
-
-        if (heap_data_) {
-            delete[] heap_data_;
-        }
-
-        heap_size_ = other.heap_size_;
-        heap_capacity_ = other.heap_capacity_;
-        heap_data_ = other.heap_data_;
-
-        other.heap_data_ = nullptr;
-        other.heap_size_ = 0;
-        other.heap_capacity_ = 0;
-
         return *this;
-    }
-
-    void clear() {
-        if (!is_sso_) {
-            heap_size_ = 0;
-            heap_data_[0] = '\0';
-        } else {
-            sso_data_[0] = '\0';
-        }
     }
 
     void reserve(size_t new_capacity) {
         if (new_capacity <= capacity()) {
             return;
         }
-
-        if (is_sso_) {
-            set_heap(sso_data_, std::strlen(sso_data_));
-        }
-
-        heap_capacity_ = new_capacity;
-        char* new_data = new char[heap_capacity_ + 1];
-        std::strcpy(new_data, heap_data_);
-        delete[] heap_data_;
+        auto new_data = new char[new_capacity + 1]{0};
+        std::strcpy(new_data, data());
+        del_data();
         heap_data_ = new_data;
+        heap_capacity_ = new_capacity;
+        is_heap_ = true;
     }
 
     void resize(size_t new_size, char c = '\0') {
-        if (is_sso_) {
-            if (new_size <= SSO_THRESHOLD) {
-                sso_data_[new_size] = '\0';
-                return;
-            }
-
-            set_heap(sso_data_, std::strlen(sso_data_));
+        reserve(new_size);
+        if (new_size > size_) {
+            memset(data() + size_, c, new_size - size_);
         }
-
-        if (new_size > heap_size_) {
-            if (new_size > heap_capacity_) {
-                reserve(new_size);
-            }
-            std::uninitialized_fill(heap_data_ + heap_size_, heap_data_ + new_size, c);
-        }
-        heap_size_ = new_size;
-        heap_data_[heap_size_] = '\0';
+        data()[new_size] = '\0';
+        size_ = new_size;
     }
 
     void push_back(char c) {
-        if (size() >= capacity()) {
-            reserve(capacity() == 0 ? 1 : capacity() * 2);
+        if (size_ == capacity()) {
+            reserve(size_ * 2);
         }
-
-        if (is_sso_) {
-            auto len = size();
-            sso_data_[len] = c;
-            sso_data_[len + 1] = '\0';
-        } else {
-            heap_data_[heap_size_++] = c;
-            heap_data_[heap_size_] = '\0';
-        }
+        data()[size_] = c;
+        size_++;
     }
 
     void pop_back() {
-        if (size() > 0) {
-            if (is_sso_) {
-                sso_data_[size() - 1] = '\0';
-            } else {
-                heap_data_[--heap_size_] = '\0';
-            }
-        } else {
-            throw std::out_of_range("pop_back() called on an empty string");
+        if (size_ == 0) {
+            throw std::runtime_error("pop back on empty vector");
         }
+        size_--;
+        data()[size_] = '\0';
+    }
+
+    void append(const char *ptr) {
+        if (ptr == nullptr) return;
+        size_t len = strlen(ptr);
+        reserve(size_ + len);
+        strcpy(data() + size_, ptr);
+        size_ += len;
+    }
+
+    void clear() {
+        data()[0] = '\0';
+        size_ = 0;
     }
 
     char at(size_t index) const {
         if (index >= size()) {
-            throw std::out_of_range("String index out of range");
+            throw std::out_of_range("index out of range");
         }
-        return is_sso_ ? sso_data_[index] : heap_data_[index];
+        return c_str()[index];
     }
 
-    void append(const char* str) {
-        size_t new_size = size() + std::strlen(str);
-
-        reserve(new_size);
-
-        if (is_sso_) {
-            std::strcat(sso_data_, str);
-        } else {
-            std::strcat(heap_data_, str);
-            heap_size_ = new_size;
+    char &at(size_t index) {
+        if (index >= size()) {
+            throw std::out_of_range("index out of range");
         }
+        return data()[index];
     }
 
-    bool empty() const { return size() == 0; }
+    char &operator[](size_t idx) {
+        if (idx >= size_) {
+            throw std::out_of_range("idx too large");
+        }
+        return data()[idx];
+    }
 
-    const char* c_str() const { return is_sso_ ? sso_data_ : heap_data_; }
+    char operator[](size_t idx) const {
+        if (idx >= size_) {
+            throw std::out_of_range("idx too large");
+        }
+        return c_str()[idx];
+    }
 
-    size_t size() const { return is_sso_ ? std::strlen(sso_data_) : heap_size_; }
-
-    size_t capacity() const { return is_sso_ ? SSO_THRESHOLD : heap_capacity_; }
-
-    String& operator+=(const String& other) {
-        append(other.is_sso_ ? other.sso_data_ : other.heap_data_);
+    String &operator+=(char c) {
+        push_back(c);
         return *this;
     }
 
-    String& operator+=(char ch) {
-        push_back(ch);
+    String &operator+=(const String &other) {
+        append(other.c_str());
         return *this;
     }
 
-    String operator+(const String& other) const {
-        String result = *this;
-        result.append(other.is_sso_ ? other.sso_data_ : other.heap_data_);
-        return result;
+    String operator+(char c) const {
+        String tmp = *this;
+        tmp.push_back(c);
+        return tmp;
     }
-
-    String operator+(char ch) const {
-        String result = *this;
-        result.push_back(ch);
-        return result;
-    }
-
-    char& operator[](size_t index) {
-        if (index >= size()) {
-            throw std::out_of_range("String index out of range");
-        }
-        return is_sso_ ? sso_data_[index] : heap_data_[index];
-    }
-
-    char operator[](size_t index) const {
-        if (index >= size()) {
-            throw std::out_of_range("String index out of range");
-        }
-        return is_sso_ ? sso_data_[index] : heap_data_[index];
+    
+    String operator+(const String &other) const {
+        String tmp = *this;
+        tmp.append(other.c_str());
+        return tmp;
     }
 
     bool operator==(const String& other) const {
         return std::strcmp(c_str(), other.c_str()) == 0;
     }
-
     bool operator!=(const String& other) const { return !(*this == other); }
 
     bool operator<(const String& other) const {
@@ -248,12 +183,12 @@ class String {
         return std::strcmp(c_str(), other.c_str()) > 0;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const String& str) {
-        os << str.c_str();
+    friend std::ostream &operator<<(std::ostream &os, const String &s) {
+        os << s.c_str();
         return os;
     }
 
-    friend std::istream& operator>>(std::istream& is, String& str) {
+    friend std::istream &operator>>(std::istream &is, String &str) {
         str.clear();
         char ch;
         ch = is.get();
@@ -264,33 +199,44 @@ class String {
         return is;
     }
 
-   private:
-    void set_sso(const char* str, size_t len) {
-        std::strcpy(sso_data_, str);  // Copy the string into SSO storage
-        is_sso_ = true;               // Mark as SSO
+    char *data() { return is_heap_ ? heap_data_ : stack_data_; }
+    const char *c_str() const { return is_heap_ ? heap_data_ : stack_data_; }
+    bool empty() const { return size_ == 0; }
+    size_t size() const { return size_; }
+    size_t capacity() const { return is_heap_ ? heap_capacity_ : MIN_CAPACITY; }
+
+   protected:
+    void set_heap_data(const char *ptr, size_t size) {
+        heap_data_ = new char[size + 1]{0};
+        std::strcpy(heap_data_, ptr);
+        size_ = size;
+        heap_capacity_ = size;
+        is_heap_ = true;
     }
 
-    void set_heap(const char* str, size_t len) {
-        auto tmp = new char[len + 1];
-        std::strcpy(tmp, str);  // Copy the string into heap storage
-        heap_data_ = tmp;
-        heap_size_ = len;
-        heap_capacity_ = len;
-        is_sso_ = false;  // Mark as heap
+    void set_stack_data(const char *ptr, size_t size) {
+        strcpy(stack_data_, ptr);
+        size_ = size;
+        is_heap_ = false;
     }
 
-    static constexpr size_t SSO_THRESHOLD = 15;  // Threshold for SSO
+    void del_data() {
+        if (is_heap_) delete[] heap_data_;
+    }
+
+    static constexpr size_t MIN_CAPACITY{15};
 
     union {
-        char sso_data_[SSO_THRESHOLD + 1];  // +1 for null terminator
         struct {
-            char* heap_data_ = nullptr;
-            size_t heap_size_;
+            char *heap_data_;
             size_t heap_capacity_;
         };
+        struct {
+            char stack_data_[MIN_CAPACITY + 1]{0};
+        };
     };
-
-    bool is_sso_ = false;
+    size_t size_;
+    bool is_heap_{false};
 };
 
 #endif  // _RPC_STRING_H
