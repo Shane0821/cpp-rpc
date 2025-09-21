@@ -10,10 +10,7 @@ Logger::~Logger() {
     if (processThread_.joinable()) {
         processThread_.join();
     }
-    if (logFile_) {
-        fclose(logFile_);
-        logFile_ = nullptr;
-    }
+    aio_.flush();
 }
 
 std::string Logger::genDefaultLogFileName() {
@@ -33,22 +30,11 @@ std::string Logger::genDefaultLogFileName() {
     return (exePath / "log" / timestampStr).string();
 }
 
-void Logger::flush() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (logFile_) {
-        fflush(logFile_);
-    }
-}
-
 void Logger::init(LogLevel level, const std::string& filename) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (processThread_.joinable()) {
         processThread_.join();
-    }
-
-    if (logFile_) {
-        fclose(logFile_);
     }
 
     filename_ = filename;
@@ -57,16 +43,7 @@ void Logger::init(LogLevel level, const std::string& filename) {
         filename_ = genDefaultLogFileName();
     }
 
-    // Create the log directory if it doesn't exist
-    std::filesystem::path logDir = std::filesystem::path(filename_).parent_path();
-    if (!std::filesystem::exists(logDir)) {
-        std::filesystem::create_directories(logDir);
-    }
-
-    logFile_ = fopen(filename_.c_str(), "a");
-    if (!logFile_) {
-        throw std::runtime_error("Failed to open log file: " + filename_);
-    }
+    aio_.openFile(filename_);
 
     level_ = level;
 

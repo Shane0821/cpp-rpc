@@ -14,6 +14,7 @@
 
 #include "mpmc_queue.h"
 #include "singleton.h"
+#include "uring_aio.h"
 
 class Logger : public Singleton<Logger> {
     friend class Singleton<Logger>;
@@ -41,12 +42,9 @@ class Logger : public Singleton<Logger> {
                             levelToString<Level>(), __FILE__, line,
                             fmt::format(format, std::forward<Args>(args)...));
 
-            fwrite(logLine.data(), sizeof(char), logLine.size(), logFile_);
+            aio_.writeAsync(logLine.data(), logLine.size());
         });
     }
-
-    // flush the data from cache to the file
-    void flush();
 
     std::string getLogFileName() const { return filename_; }
     Logger::LogLevel getLogLevel() const { return level_; }
@@ -83,7 +81,7 @@ class Logger : public Singleton<Logger> {
     // Tool function for getting default log file name
     std::string genDefaultLogFileName();
 
-    FILE* logFile_{nullptr};
+    AsyncFileIO aio_;
     std::string filename_;
 
     std::mutex mutex_;
