@@ -27,51 +27,22 @@ class Logger : public Singleton<Logger> {
     void init(LogLevel level = LogLevel::INFO, const std::string& filename = "");
 
     // add a log task to the queue
-    template <typename... Args>
-    constexpr void log(LogLevel level, int line, const std::string& format = "{}",
-                       Args&&... args) {
-        if (level < level_) return;
+    template <LogLevel Level, typename... Args>
+    void log(int line, const std::string& format = "{}", Args&&... args) {
+        if (Level < level_) return;
 
-        taskQueue_.emplace(
-            [... args = std::forward<Args>(args), level, line, format, this]() {
-                time_t now = time(0);
-                char* dt = ctime(&now);
-                dt[strlen(dt) - 1] = '\0';  // Remove newline
+        taskQueue_.emplace([... args = std::forward<Args>(args), line, format, this]() {
+            time_t now = time(0);
+            char* dt = ctime(&now);
+            dt[strlen(dt) - 1] = '\0';  // Remove newline
 
-                const char *levelStr = "";
-                switch (level) {
-                    case LogLevel::TRACE:
-                        levelStr = "TRACE";
-                        break;
-                    case LogLevel::DEBUG:
-                        levelStr = "DEBUG";
-                        break;
-                    case LogLevel::INFO:
-                        levelStr = "INFO";
-                        break;
-                    case LogLevel::WARNING:
-                        levelStr = "WARNING";
-                        break;
-                    case LogLevel::ERROR:
-                        levelStr = "ERROR";
-                        break;
-                    case LogLevel::FATAL:
-                        levelStr = "FATAL";
-                        break;
-                }
+            auto logLine =
+                fmt::format("[{}][{}][{}][{}:{}]:{}\n", std::this_thread::get_id(), dt,
+                            levelToString<Level>(), __FILE__, line,
+                            fmt::format(format, std::forward<Args>(args)...));
 
-                auto logLine = fmt::format(
-                    "[{}][{}][{}][{}:{}]:{}\n",
-                    std::this_thread::get_id(),
-                    dt,
-                    levelStr,
-                    __FILE__,
-                    line,
-                    fmt::format(format, std::forward<Args>(args)...)
-                );
-
-                fwrite(logLine.data(), sizeof(char), logLine.size(), logFile_);
-            });
+            fwrite(logLine.data(), sizeof(char), logLine.size(), logFile_);
+        });
     }
 
     // flush the data from cache to the file
@@ -86,6 +57,26 @@ class Logger : public Singleton<Logger> {
     Logger& operator=(const Logger&) = delete;
 
    private:
+    template <LogLevel level>
+    constexpr const char* levelToString() {
+        if constexpr (level == LogLevel::TRACE) {
+            return "TRACE";
+        } else if constexpr (level == LogLevel::DEBUG) {
+            return "DEBUG";
+        } else if constexpr (level == LogLevel::INFO) {
+            return "INFO";
+        } else if constexpr (level == LogLevel::WARNING) {
+            return "WARNING";
+        } else if constexpr (level == LogLevel::ERROR) {
+            return "ERROR";
+        } else if constexpr (level == LogLevel::FATAL) {
+            return "FATAL";
+        } else {
+            static_assert(level != level, "Unknown log level");
+            return "UNKNOWN";
+        }
+    }
+
     // Process log tasks
     void processLogTasks();
 
@@ -104,16 +95,16 @@ class Logger : public Singleton<Logger> {
 };
 
 #define LOG_TRACE(format, ...) \
-    Logger::GetInst().log(Logger::LogLevel::TRACE, __LINE__, format, ##__VA_ARGS__)
+    Logger::GetInst().log<Logger::LogLevel::TRACE>(__LINE__, format, ##__VA_ARGS__)
 #define LOG_DEBUG(format, ...) \
-    Logger::GetInst().log(Logger::LogLevel::DEBUG, __LINE__, format, ##__VA_ARGS__)
+    Logger::GetInst().log<Logger::LogLevel::DEBUG>(__LINE__, format, ##__VA_ARGS__)
 #define LOG_INFO(format, ...) \
-    Logger::GetInst().log(Logger::LogLevel::INFO, __LINE__, format, ##__VA_ARGS__)
+    Logger::GetInst().log<Logger::LogLevel::INFO>(__LINE__, format, ##__VA_ARGS__)
 #define LOG_WARNING(format, ...) \
-    Logger::GetInst().log(Logger::LogLevel::WARNING, __LINE__, format, ##__VA_ARGS__)
+    Logger::GetInst().log<Logger::LogLevel::WARNING>(__LINE__, format, ##__VA_ARGS__)
 #define LOG_ERROR(format, ...) \
-    Logger::GetInst().log(Logger::LogLevel::ERROR, __LINE__, format, ##__VA_ARGS__)
+    Logger::GetInst().log<Logger::LogLevel::ERROR>(__LINE__, format, ##__VA_ARGS__)
 #define LOG_FATAL(format, ...) \
-    Logger::GetInst().log(Logger::LogLevel::FATAL, __LINE__, format, ##__VA_ARGS__)
+    Logger::GetInst().log<Logger::LogLevel::FATAL>(__LINE__, format, ##__VA_ARGS__)
 
 #endif  // _RPC_LOGGER_H
