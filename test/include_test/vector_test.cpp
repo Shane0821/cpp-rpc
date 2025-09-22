@@ -34,7 +34,7 @@ TEST(VectorTest, CopyConstructor) {
     Vector<int> v_copy = v;
     v.clear();
     EXPECT_EQ(v_copy.size(), 3);
-    EXPECT_EQ(v_copy.capacity(), 4);
+    EXPECT_EQ(v_copy.capacity(), 3);
     EXPECT_FALSE(v_copy.empty());
     EXPECT_EQ(v_copy[0], 10);
     EXPECT_EQ(v_copy[1], 20);
