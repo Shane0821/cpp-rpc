@@ -5,16 +5,15 @@
 
 #include <atomic>
 #include <ctime>
-#include <filesystem>
 #include <functional>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
 
+#include "file.h"
 #include "mpmc_queue.h"
 #include "singleton.h"
-#include "uring_aio.h"
 
 class Logger : public Singleton<Logger> {
     friend class Singleton<Logger>;
@@ -42,11 +41,10 @@ class Logger : public Singleton<Logger> {
                             levelToString<Level>(), __FILE__, line,
                             fmt::format(format, std::forward<Args>(args)...));
 
-            aio_.writeAsync(logLine.data(), logLine.size());
+            file_.write(logLine.data(), logLine.size());
         });
     }
 
-    std::string getLogFileName() const { return filename_; }
     Logger::LogLevel getLogLevel() const { return level_; }
 
    protected:
@@ -75,20 +73,17 @@ class Logger : public Singleton<Logger> {
         }
     }
 
-    // Process log tasks
-    void processLogTasks();
-
     // Tool function for getting default log file name
     std::string genDefaultLogFileName();
 
-    AsyncFileIO aio_;
-    std::string filename_;
+    // Process log tasks
+    void processLogTasks();
 
+    File file_;
     std::mutex mutex_;
     MPMCQueue<std::function<void()>> taskQueue_;
     std::thread processThread_;
     std::atomic<bool> stop_{false};
-
     LogLevel level_{LogLevel::INFO};
 };
 

@@ -10,7 +10,7 @@ Logger::~Logger() {
     if (processThread_.joinable()) {
         processThread_.join();
     }
-    aio_.flush();
+    file_.close_file();
 }
 
 std::string Logger::genDefaultLogFileName() {
@@ -37,13 +37,11 @@ void Logger::init(LogLevel level, const std::string& filename) {
         processThread_.join();
     }
 
-    filename_ = filename;
-
-    if (filename_.empty()) {
-        filename_ = genDefaultLogFileName();
+    if (filename.empty()) {
+        file_.open_file(genDefaultLogFileName());
+    } else {
+        file_.open_file(filename);
     }
-
-    aio_.openFile(filename_);
 
     level_ = level;
 
