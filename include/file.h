@@ -7,11 +7,7 @@ class File {
    public:
     File() = default;
 
-    ~File() {
-        if (fd_) {
-            close(fd_);
-        }
-    }
+    ~File() { close_file(); }
 
     bool open_file(const std::string &file_path, bool append = false) {
         path_ = file_path;
