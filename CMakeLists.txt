@@ -76,13 +76,14 @@ file(COPY ${CONFIG_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/config)
 # Build
 # ============================
 
+add_subdirectory(include)
 add_subdirectory(src)
 
 # Conditionally build demo
 if (BUILD_DEMO)
     add_subdirectory(demo)
     add_custom_target(demo ALL
-        DEPENDS rpc
+        DEPENDS rpc lutil
     )
 endif()
 
@@ -90,6 +91,6 @@ endif()
 if (BUILD_TEST)
     add_subdirectory(test)
     add_custom_target(test ALL
-        DEPENDS rpc
+        DEPENDS rpc lutil
     )
 endif()

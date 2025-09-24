@@ -10,6 +10,7 @@ add_executable(
 target_link_libraries(
   include_test
   GTest::gtest_main
+  lutil
 )
 
 gtest_discover_tests(include_test)

@@ -1,5 +1,5 @@
-#ifndef _RPC_LOGGER_H
-#define _RPC_LOGGER_H
+#ifndef _LOGGER_H
+#define _LOGGER_H
 
 #include <fmt/core.h>
 
@@ -31,15 +31,15 @@ class Logger : public Singleton<Logger> {
     void log(int line, const std::string& format = "{}", Args&&... args) {
         if (Level < level_) return;
 
-        taskQueue_.emplace([... args = std::forward<Args>(args), line, format, this]() {
+        taskQueue_.emplace([... args = std::forward<Args>(args), line, format, this]() mutable {
             time_t now = time(0);
             char* dt = ctime(&now);
             dt[strlen(dt) - 1] = '\0';  // Remove newline
 
-            auto logLine =
-                fmt::format("[{}][{}][{}][{}:{}]:{}\n", std::this_thread::get_id(), dt,
-                            levelToString<Level>(), __FILE__, line,
-                            fmt::format(format, std::forward<Args>(args)...));
+            auto pid = std::this_thread::get_id();
+            auto logLine = fmt::format("[{}][{}][{}][{}:{}]: {}\n", *(int*)&pid, dt,
+                                       levelToString<Level>(), __FILE__, line,
+                                       fmt::format(format, std::move(args)...));
 
             file_.write(logLine.data(), logLine.size());
         });
@@ -79,7 +79,7 @@ class Logger : public Singleton<Logger> {
     // Process log tasks
     void processLogTasks();
 
-    File file_;
+    File<true, true> file_;
     std::mutex mutex_;
     MPMCQueue<std::function<void()>> taskQueue_;
     std::thread processThread_;

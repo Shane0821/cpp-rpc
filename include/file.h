@@ -3,6 +3,7 @@
 
 #include "uring_aio.h"
 
+template <bool SQ_POLL, bool SQ_FIXED, unsigned int QUEUE_DEPTH = 128>
 class File {
    public:
     File() = default;
@@ -25,15 +26,35 @@ class File {
             return false;
         }
 
-        return aio_.register_fds(&fd_, 1);
+        offset_ = lseek64(fd_, 0, SEEK_END);
+        if (offset_ < 0) {
+            std::cerr << "failed to seek end: " << offset_ << std::endl;
+            return false;
+        }
+
+        if constexpr (SQ_FIXED == true) {
+            return aio_.register_fds(&fd_, 1);
+        } else {
+            return true;
+        }
     }
 
-    void write(const char *data, size_t len) { aio_.write_async(data, len, -1); }
+    void write(const char *data, size_t len) {
+        if constexpr (SQ_FIXED == true) {
+            aio_.write_async(data, len, offset_, 0, true);
+        } else {
+            aio_.write_async(data, len, offset_, fd_, true);
+        }
+        offset_ += len;
+    }
 
     void flush() {
         if (fd_ != -1) {
-            aio_.flush();
-            fsync(fd_);
+            if constexpr (SQ_FIXED == true) {
+                aio_.fsync_and_wait(0, true);
+            } else {
+                aio_.fsync_and_wait(fd_, false);
+            }
         }
     }
 
@@ -49,9 +70,10 @@ class File {
     const std::string &path() const { return path_; }
 
    private:
-    UringAIO aio_;
+    UringAIO aio_{{QUEUE_DEPTH, SQ_POLL, SQ_FIXED, 2000}};
     std::string path_;
     int fd_{-1};
+    off_t offset_{-1};
 };
 
 #endif

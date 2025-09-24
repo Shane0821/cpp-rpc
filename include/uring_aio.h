@@ -1,213 +1,304 @@
 #ifndef _URING_AIO_H
 #define _URING_AIO_H
 
-#include <fcntl.h>
 #include <liburing.h>
 #include <unistd.h>
 
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 class UringAIO {
    public:
-    UringAIO() {
-        if (geteuid()) {
-            throw std::runtime_error("you need root privileges to run aio.\n");
+    struct Options {
+        unsigned int queue_depth;
+        bool use_sqpoll;
+        bool require_fixed_files;
+        unsigned int sq_thread_idle_ms;
+    };
+
+    explicit UringAIO(const Options& opt) : opts_(opt) {
+        memset(&params_, 0, sizeof(params_));
+        if (opts_.use_sqpoll) {
+            params_.flags |= IORING_SETUP_SQPOLL;
+            params_.sq_thread_idle = opts_.sq_thread_idle_ms;
         }
 
-        struct io_uring_params params;
-        memset(&params, 0, sizeof(params));
-        params.flags |= IORING_SETUP_SQPOLL;
-        params.sq_thread_idle = 2000;  // 2s
-
-        if (io_uring_queue_init_params(QUEUE_DEPTH, &ring_, &params) != 0) {
-            throw std::runtime_error("failed to initialize io_uring");
+        int rc = io_uring_queue_init_params(opts_.queue_depth, &ring_, &params_);
+        if (rc != 0) {
+            throw std::runtime_error(std::string("io_uring_queue_init_params failed: ") +
+                                     strerror(-rc));
         }
 
-        // Check if SQPOLL feature is actually supported
-        if (!(params.features & IORING_FEAT_SQPOLL_NONFIXED)) {
-            io_uring_queue_exit(&ring_);
-            throw std::runtime_error("SQPOLL not supported on this system");
+        if (opts_.use_sqpoll) {
+            // If we require fixed files, ensure kernel supports SQPOLL with fixed or
+            // non-fixed appropriately. IORING_FEAT_SQPOLL_NONFIXED means SQPOLL works
+            // with non-fixed files; if not present and we don't register, raw fds in
+            // SQPOLL will fail.
+            if (!opts_.require_fixed_files &&
+                !(params_.features & IORING_FEAT_SQPOLL_NONFIXED)) {
+                io_uring_queue_exit(&ring_);
+                throw std::runtime_error(
+                    "SQPOLL requires fixed files on this kernel; set "
+                    "require_fixed_files=true and register files");
+            }
         }
     }
 
-    ~UringAIO() {
-        close();
-        io_uring_queue_exit(&ring_);
-    }
+    ~UringAIO() { close(); }
 
+    // Register a set of fds as fixed files; returns the count registered.
     bool register_fds(const int* fds, int num) {
+        if (num <= 0) return false;
         int ret = io_uring_register_files(&ring_, fds, num);
-        if (ret) {
-            std::cerr << "Error registering fd: " << strerror(-ret) << std::endl;
+        if (ret < 0) {
+            std::cerr << "Error registering files: " << strerror(-ret) << std::endl;
             return false;
         }
+        registered_files_ = num;
         return true;
     }
 
-    void write_async(const char* data, size_t size, off_t offset = -1) {
-        // Create a copy of the data to ensure it persists until the write completes
-        auto data_copy = std::make_unique<char[]>(size);
-        std::memcpy(data_copy.get(), data, size);
+    // Unregister registered files (if any).
+    void unregister_fds() {
+        if (registered_files_ > 0) {
+            int ret = io_uring_unregister_files(&ring_);
+            if (ret < 0) {
+                std::cerr << "Error unregistering files: " << strerror(-ret) << std::endl;
+            }
+            registered_files_ = 0;
+        }
+    }
 
-        // Get an SQE (Submission Queue Entry)
-        struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
+    // Submit an async write.
+    // If using fixed files, pass fixed_index (>=0) and set use_fixed=true.
+    // If using raw fd, pass fd and set use_fixed=false.
+    void write_async(const char* data, size_t size, off_t offset, int fd_or_index,
+                     bool use_fixed) {
+        if (opts_.require_fixed_files && !use_fixed) {
+            std::cerr
+                << "write_async called with raw fd while fixed files are required\n";
+            return;
+        }
+        if (use_fixed && registered_files_ == 0) {
+            std::cerr << "No files registered but write_async requested fixed file\n";
+            return;
+        }
 
+        if (pending_ == opts_.queue_depth) {
+            peek_completions();
+        }
+
+        // Copy buffer so it's alive until completion (could be optimized with
+        // user-managed lifetimes).
+        auto buf = std::make_unique<char[]>(size);
+        std::memcpy(buf.get(), data, size);
+
+        io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
         if (!sqe) {
-            // In SQPOLL mode, we might need to check for completions to free up SQEs
-            peek_completions();  // Process completions to free SQEs
+            std::cerr << "Failed to get SQE\n";
+            return;
+        }
+
+        auto* req =
+            new WriteRequest{std::move(buf), size, offset, fd_or_index, use_fixed};
+
+        // Prepare initial write
+        io_uring_prep_write(sqe, fd_or_index, req->data.get(), size, offset);
+        if (use_fixed) {
+            sqe->flags |= IOSQE_FIXED_FILE;
+        }
+        io_uring_sqe_set_data(sqe, req);
+
+        int submitted = io_uring_submit(&ring_);
+        if (submitted < 0) {
+            std::cerr << "submit failed: " << strerror(-submitted) << std::endl;
+            delete req;
+            return;
+        }
+        ++pending_;
+    }
+
+    // Wait for at least one completion. Returns true if the operation completed
+    // successfully (or all retries eventually did).
+    bool wait_for_completion() {
+        io_uring_cqe* cqe = nullptr;
+        int err = io_uring_wait_cqe(&ring_, &cqe);
+        if (err < 0) {
+            std::cerr << "Error waiting for completion: " << strerror(-err) << std::endl;
+            return false;
+        }
+        bool ret = handle_cqe(cqe);
+        io_uring_cqe_seen(&ring_, cqe);
+        return ret;
+    }
+
+    // Wait until all current pending I/Os complete.
+    bool wait_all() {
+        bool all_ok = true;
+        while (pending_ > 0) {
+            if (!wait_for_completion()) {
+                all_ok = false;
+            }
+        }
+        return all_ok;
+    }
+
+    // Non-blocking harvesting of completions. Returns number processed.
+    size_t peek_completions() {
+        size_t n = 0;
+        io_uring_cqe* cqe = nullptr;
+        while (io_uring_peek_cqe(&ring_, &cqe) == 0) {
+            handle_cqe(cqe);
+            io_uring_cqe_seen(&ring_, cqe);
+            ++n;
+        }
+        return n;
+    }
+
+    // Submit an fsync on the given fd (fixed or raw) and wait for all pending including
+    // this fsync.
+    void fsync_and_wait(int fd_or_index, bool use_fixed, bool data_only = false) {
+        io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
+        if (!sqe) {
+            // Ensure we at least wait current completions if queue is full
+            wait_for_completion();
             sqe = io_uring_get_sqe(&ring_);
             if (!sqe) {
-                std::cerr << "failed to get SQE\n";
+                std::cerr << "Failed to get SQE for fsync\n";
                 return;
             }
         }
-
-        // Prepare write operation
-        if (offset == -1) {
-            // Append mode. 0 means fd[0].
-            io_uring_prep_write(sqe, 0, data_copy.get(), size, -1);
-        } else {
-            // Specific offset
-            io_uring_prep_write(sqe, 0, data_copy.get(), size, offset);
+        unsigned flags = data_only ? IORING_FSYNC_DATASYNC : 0;
+        io_uring_prep_fsync(sqe, fd_or_index, flags);
+        if (use_fixed) {
+            sqe->flags |= IOSQE_FIXED_FILE;
         }
-        sqe->flags |= IOSQE_FIXED_FILE;
+        // No user_data needed for fsync; we track via pending_
+        io_uring_sqe_set_data(sqe, nullptr);
 
-        // Store the data pointer in user_data to keep it alive
-        WriteRequest* request = new WriteRequest{std::move(data_copy), offset, size};
-
-        io_uring_sqe_set_data(sqe, request);
-
-        // Submit the operation
-        int submitted = io_uring_submit(&ring_);
-        if (submitted < 0) {
-            delete request;
-            std::cerr << "failed to submit IO: " << std::string(strerror(-submitted))
-                      << std::endl;
-        }
-    }
-
-    bool wait_for_completion() {
-        struct io_uring_cqe* cqe;
-        // wait until a completion happens
-        int ret = io_uring_wait_cqe(&ring_, &cqe);
+        int ret = io_uring_submit(&ring_);
         if (ret < 0) {
-            std::cerr << "Error waiting for completion: " << strerror(-ret) << std::endl;
-            return false;
+            std::cerr << "submit fsync failed: " << strerror(-ret) << std::endl;
+            return;
         }
+        ++pending_;
 
-        // Process completion
-        bool success = process_completion(cqe);
-
-        // Mark completion as seen
-        io_uring_cqe_seen(&ring_, cqe);
-
-        return success;
-    }
-
-    bool wait_for_completions(size_t count) {
-        bool all_success = true;
-
-        for (size_t i = 0; i < count; ++i) {
-            if (!wait_for_completion()) {
-                all_success = false;
-            }
+        // Wait for everything outstanding
+        int wait_rc = io_uring_submit_and_wait(&ring_, pending_);
+        if (wait_rc < 0) {
+            std::cerr << "submit_and_wait failed: " << strerror(-wait_rc) << std::endl;
         }
-
-        return all_success;
-    }
-
-    size_t peek_completions() {
-        // Check for any available completions without waiting
-        struct io_uring_cqe* cqe;
-        size_t completed = 0;
-
-        while (io_uring_peek_cqe(&ring_, &cqe) == 0) {
-            process_completion(cqe);
-            io_uring_cqe_seen(&ring_, cqe);
-            completed++;
-        }
-
-        return completed;
-    }
-
-    void flush() {
-        // For SQPOLL mode, we need to ensure all operations are completed
-        // before calling fsync
-        io_uring_submit_and_wait(&ring_, 0);  // Wait for all pending operations
+        // Drain to clear CQEs
+        wait_all();
     }
 
     void close() {
-        flush();
-        io_uring_unregister_files(&ring_);
+        if (closed_) return;
+        // drain outstanding I/O
+        wait_all();
+        unregister_fds();
+        io_uring_queue_exit(&ring_);
+        closed_ = true;
     }
 
-   protected:
-    bool process_completion(struct io_uring_cqe* cqe) {
-        WriteRequest* request = reinterpret_cast<WriteRequest*>(cqe->user_data);
+   private:
+    struct WriteRequest {
+        std::unique_ptr<char[]> data;
+        size_t size;
+        off_t offset;
+        int fd_or_index;
+        bool use_fixed;
+    };
+
+    bool handle_cqe(io_uring_cqe* cqe) {
+        // Note: cqe->user_data may be null (e.g., fsync we submitted without data)
+        WriteRequest* req = reinterpret_cast<WriteRequest*>(io_uring_cqe_get_data(cqe));
+
+        if (req == nullptr) {
+            // e.g., fsync completion
+            --pending_;
+            return true;
+        }
 
         if (cqe->res < 0) {
             std::cerr << "Async write failed: " << strerror(-cqe->res) << " for "
-                      << request->size << " bytes at offset " << request->offset
-                      << std::endl;
-        } else if (static_cast<size_t>(cqe->res) != request->size) {
-            std::cerr << "Partial write: " << cqe->res << " bytes written instead of "
-                      << request->size << " at offset " << request->offset << std::endl;
+                      << req->size << " bytes at offset " << req->offset << std::endl;
+            delete req;
+            --pending_;
+            return false;
         }
 
-        // Clean up the request
-        delete request;
+        // Handle partial writes by resubmitting the remainder
+        int written = cqe->res;
+        if (static_cast<size_t>(written) < req->size) {
+            size_t remaining = req->size - written;
+            req->offset += written;
 
-        return cqe->res >= 0;
+            // Shift buffer contents forward: we can just move the pointer into the buffer
+            // by tracking a current pointer offset. Simpler: adjust data by memmove.
+            // Here we allocate new pointer logic: keep same buffer but point to remaining
+            // region. Replace req->data with a view by adjusting base pointer: Since
+            // unique_ptr cannot be pointer-arithmetic adjusted safely, we use a raw
+            // pointer for prep.
+            char* new_base = req->data.get() + written;
+
+            io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
+            if (!sqe) {
+                // If queue is full, we have to wait for some completion and retry
+                // Mark that we still have a pending I/O (do not decrement pending_ here)
+                std::cerr << "No SQE available for partial write resubmit; waiting...\n";
+                // Requeue will happen after another completion; for simplicity, try
+                // immediate wait
+                io_uring_cqe* tmp = nullptr;
+                if (io_uring_wait_cqe(&ring_, &tmp) == 0) {
+                    handle_cqe(tmp);
+                    io_uring_cqe_seen(&ring_, tmp);
+                }
+                sqe = io_uring_get_sqe(&ring_);
+                if (!sqe) {
+                    std::cerr << "Still no SQE available; dropping partial resubmit\n";
+                    delete req;
+                    --pending_;
+                    return false;
+                }
+            }
+
+            // Prepare remaining write
+            io_uring_prep_write(sqe, req->fd_or_index, new_base, remaining, req->offset);
+            if (req->use_fixed) {
+                sqe->flags |= IOSQE_FIXED_FILE;
+            }
+            io_uring_sqe_set_data(sqe, req);
+
+            int submitted = io_uring_submit(&ring_);
+            if (submitted < 0) {
+                std::cerr << "submit (partial) failed: " << strerror(-submitted)
+                          << std::endl;
+                delete req;
+                --pending_;
+                return false;
+            }
+            // pending_ unchanged: we are continuing the same logical write, and we did
+            // not decrement for the prior CQE yet.
+            return true;
+        }
+
+        // Full write completed
+        delete req;
+        --pending_;
+        return true;
     }
 
-    struct WriteRequest {
-        std::unique_ptr<char[]> data;
-        off_t offset;
-        size_t size;
-    };
-
-    static constexpr size_t QUEUE_DEPTH{128};
-
-    struct io_uring ring_;
+    Options opts_;
+    io_uring ring_{};
+    io_uring_params params_{};
+    size_t pending_{0};
+    int registered_files_{0};
+    bool closed_{false};
 };
-
-// Advanced version with CPU affinity support (Alibaba Cloud Linux specific)
-// class AdvancedAsyncFileWriter : public AsyncFileWriter {
-//    private:
-//     struct io_uring ring_;
-//     int fd_;
-
-//    public:
-//     AdvancedAsyncFileWriter(int cpu_affinity = -1) : fd_(-1) {
-//         struct io_uring_params params = {};
-//         params.flags = IORING_SETUP_SQPOLL;
-
-// // Enable percpu sqthread and affinity features if supported
-// #ifdef IORING_SETUP_SQPOLL_PERCPU
-//         params.flags |= IORING_SETUP_SQPOLL_PERCPU | IORING_SETUP_SQ_AFF;
-// #endif
-
-//         if (cpu_affinity >= 0) {
-//             params.sq_thread_cpu = cpu_affinity;
-//         }
-
-//         params.sq_thread_idle = 100;  // 100ms idle timeout
-
-//         if (io_uring_queue_init_params(32, &ring_, &params) != 0) {
-//             throw std::runtime_error(
-//                 "Failed to initialize io_uring with advanced SQPOLL");
-//         }
-
-//         // Additional initialization for advanced features...
-//     }
-
-//     // Rest of the implementation would be similar to the base class
-//     // but with additional optimizations for SQPOLL
-// };
 
 #endif
