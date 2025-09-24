@@ -55,7 +55,7 @@ class UringAIO {
         if (num <= 0) return false;
         int ret = io_uring_register_files(&ring_, fds, num);
         if (ret < 0) {
-            std::cerr << "Error registering files: " << strerror(-ret) << std::endl;
+            std::cerr << "error registering files: " << strerror(-ret) << std::endl;
             return false;
         }
         registered_files_ = num;
@@ -67,7 +67,7 @@ class UringAIO {
         if (registered_files_ > 0) {
             int ret = io_uring_unregister_files(&ring_);
             if (ret < 0) {
-                std::cerr << "Error unregistering files: " << strerror(-ret) << std::endl;
+                std::cerr << "error unregistering files: " << strerror(-ret) << std::endl;
             }
             registered_files_ = 0;
         }
@@ -78,17 +78,17 @@ class UringAIO {
     // If using raw fd, pass fd and set use_fixed=false.
     void write_async(const char* data, size_t size, off_t offset, int fd_or_index,
                      bool use_fixed) {
-        if (opts_.require_fixed_files && !use_fixed) {
+        if (opts_.require_fixed_files && !use_fixed) [[unlikely]] {
             std::cerr
                 << "write_async called with raw fd while fixed files are required\n";
             return;
         }
-        if (use_fixed && registered_files_ == 0) {
+        if (use_fixed && registered_files_ == 0) [[unlikely]] {
             std::cerr << "No files registered but write_async requested fixed file\n";
             return;
         }
 
-        if (pending_ == opts_.queue_depth) {
+        if (pending_ >= opts_.queue_depth) {
             peek_completions();
         }
 
@@ -98,9 +98,14 @@ class UringAIO {
         std::memcpy(buf.get(), data, size);
 
         io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
-        if (!sqe) {
-            std::cerr << "Failed to get SQE\n";
-            return;
+        if (!sqe) [[unlikely]] {
+            // wait for completions if queue is full
+            wait_sq_space_left();
+            sqe = io_uring_get_sqe(&ring_);
+            if (!sqe) {
+                std::cerr << "failed to get SQE for write" << data << '\n';
+                return;
+            }
         }
 
         auto* req =
@@ -113,62 +118,25 @@ class UringAIO {
         }
         io_uring_sqe_set_data(sqe, req);
 
-        int submitted = io_uring_submit(&ring_);
-        if (submitted < 0) {
-            std::cerr << "submit failed: " << strerror(-submitted) << std::endl;
+        int ret = io_uring_submit(&ring_);
+        if (ret < 0) [[unlikely]] {
+            std::cerr << "submit failed: " << strerror(-ret) << std::endl;
             delete req;
             return;
         }
         ++pending_;
     }
 
-    // Wait for at least one completion. Returns true if the operation completed
-    // successfully (or all retries eventually did).
-    bool wait_for_completion() {
-        io_uring_cqe* cqe = nullptr;
-        int err = io_uring_wait_cqe(&ring_, &cqe);
-        if (err < 0) {
-            std::cerr << "Error waiting for completion: " << strerror(-err) << std::endl;
-            return false;
-        }
-        bool ret = handle_cqe(cqe);
-        io_uring_cqe_seen(&ring_, cqe);
-        return ret;
-    }
-
-    // Wait until all current pending I/Os complete.
-    bool wait_all() {
-        bool all_ok = true;
-        while (pending_ > 0) {
-            if (!wait_for_completion()) {
-                all_ok = false;
-            }
-        }
-        return all_ok;
-    }
-
-    // Non-blocking harvesting of completions. Returns number processed.
-    size_t peek_completions() {
-        size_t n = 0;
-        io_uring_cqe* cqe = nullptr;
-        while (io_uring_peek_cqe(&ring_, &cqe) == 0) {
-            handle_cqe(cqe);
-            io_uring_cqe_seen(&ring_, cqe);
-            ++n;
-        }
-        return n;
-    }
-
     // Submit an fsync on the given fd (fixed or raw) and wait for all pending including
     // this fsync.
     void fsync_and_wait(int fd_or_index, bool use_fixed, bool data_only = false) {
         io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
-        if (!sqe) {
+        if (!sqe) [[unlikely]] {
             // Ensure we at least wait current completions if queue is full
-            wait_for_completion();
+            wait_sq_space_left();
             sqe = io_uring_get_sqe(&ring_);
             if (!sqe) {
-                std::cerr << "Failed to get SQE for fsync\n";
+                std::cerr << "failed to get SQE for fsync\n";
                 return;
             }
         }
@@ -181,16 +149,16 @@ class UringAIO {
         io_uring_sqe_set_data(sqe, nullptr);
 
         int ret = io_uring_submit(&ring_);
-        if (ret < 0) {
+        if (ret < 0) [[unlikely]] {
             std::cerr << "submit fsync failed: " << strerror(-ret) << std::endl;
             return;
         }
         ++pending_;
 
         // Wait for everything outstanding
-        int wait_rc = io_uring_submit_and_wait(&ring_, pending_);
-        if (wait_rc < 0) {
-            std::cerr << "submit_and_wait failed: " << strerror(-wait_rc) << std::endl;
+        ret = io_uring_submit(&ring_);
+        if (ret < 0) [[unlikely]] {
+            std::cerr << "submit failed: " << strerror(-ret) << std::endl;
         }
         // Drain to clear CQEs
         wait_all();
@@ -214,6 +182,49 @@ class UringAIO {
         bool use_fixed;
     };
 
+    // Wait for at least one completion. Returns true if the operation completed
+    // successfully (or all retries eventually did).
+    bool wait_for_completion() {
+        io_uring_cqe* cqe = nullptr;
+        int err = io_uring_wait_cqe(&ring_, &cqe);
+        if (err < 0) [[unlikely]] {
+            std::cerr << "error waiting for completion: " << strerror(-err) << std::endl;
+            return false;
+        }
+        bool ret = handle_cqe(cqe);
+        io_uring_cqe_seen(&ring_, cqe);
+        return ret;
+    }
+
+    // Wait until all current pending I/Os complete.
+    bool wait_all() {
+        bool all_ok = true;
+        while (pending_ > 0) {
+            if (!wait_for_completion()) [[unlikely]] {
+                all_ok = false;
+            }
+        }
+        return all_ok;
+    }
+
+    // Non-blocking harvesting of completions. Returns number processed.
+    size_t peek_completions() {
+        size_t n = 0;
+        io_uring_cqe* cqe = nullptr;
+        while (io_uring_peek_cqe(&ring_, &cqe) == 0) {
+            handle_cqe(cqe);
+            io_uring_cqe_seen(&ring_, cqe);
+            ++n;
+        }
+        return n;
+    }
+
+    void wait_sq_space_left() {
+        while (!io_uring_sq_space_left(&ring_)) {
+            peek_completions();
+        }
+    }
+
     bool handle_cqe(io_uring_cqe* cqe) {
         // Note: cqe->user_data may be null (e.g., fsync we submitted without data)
         WriteRequest* req = reinterpret_cast<WriteRequest*>(io_uring_cqe_get_data(cqe));
@@ -224,7 +235,7 @@ class UringAIO {
             return true;
         }
 
-        if (cqe->res < 0) {
+        if (cqe->res < 0) [[unlikely]] {
             std::cerr << "Async write failed: " << strerror(-cqe->res) << " for "
                       << req->size << " bytes at offset " << req->offset << std::endl;
             delete req;
@@ -247,19 +258,10 @@ class UringAIO {
             char* new_base = req->data.get() + written;
 
             io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
-            if (!sqe) {
-                // If queue is full, we have to wait for some completion and retry
-                // Mark that we still have a pending I/O (do not decrement pending_ here)
-                std::cerr << "No SQE available for partial write resubmit; waiting...\n";
-                // Requeue will happen after another completion; for simplicity, try
-                // immediate wait
-                io_uring_cqe* tmp = nullptr;
-                if (io_uring_wait_cqe(&ring_, &tmp) == 0) {
-                    handle_cqe(tmp);
-                    io_uring_cqe_seen(&ring_, tmp);
-                }
+            if (!sqe) [[unlikely]] {
+                wait_sq_space_left();
                 sqe = io_uring_get_sqe(&ring_);
-                if (!sqe) {
+                if (!sqe) [[unlikely]] {
                     std::cerr << "Still no SQE available; dropping partial resubmit\n";
                     delete req;
                     --pending_;
@@ -275,7 +277,7 @@ class UringAIO {
             io_uring_sqe_set_data(sqe, req);
 
             int submitted = io_uring_submit(&ring_);
-            if (submitted < 0) {
+            if (submitted < 0) [[unlikely]] {
                 std::cerr << "submit (partial) failed: " << strerror(-submitted)
                           << std::endl;
                 delete req;
