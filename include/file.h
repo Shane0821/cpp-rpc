@@ -3,7 +3,7 @@
 
 #include "uring_aio.h"
 
-template <bool SQ_POLL, bool SQ_FIXED, unsigned int QUEUE_DEPTH = 128>
+template <bool SQ_POLL, bool SQ_FIXED, unsigned int QUEUE_DEPTH = 64>
 class File {
    public:
     File() = default;
@@ -20,7 +20,7 @@ class File {
             flags |= O_TRUNC;
         }
 
-        fd_ = open(path_.c_str(), flags, 0644);
+        fd_ = open(path_.c_str(), flags, S_IRUSR | S_IWUSR);
         if (fd_ == -1) {
             std::cerr << "failed to open file: " << path_ << std::endl;
             return false;
@@ -40,12 +40,14 @@ class File {
     }
 
     void write(const char *data, size_t len) {
-        if constexpr (SQ_FIXED == true) {
-            aio_.write_async(data, len, offset_, 0, true);
-        } else {
-            aio_.write_async(data, len, offset_, fd_, true);
+        if (fd_ != -1) [[likely]] {
+            if constexpr (SQ_FIXED == true) {
+                aio_.write_async(data, len, offset_, 0, true);
+            } else {
+                aio_.write_async(data, len, offset_, fd_, true);
+            }
+            offset_ += len;
         }
-        offset_ += len;
     }
 
     void flush() {
@@ -60,6 +62,7 @@ class File {
 
     void close_file() {
         if (fd_ != -1) {
+            flush();
             aio_.close();
             close(fd_);
             fd_ = -1;
