@@ -32,12 +32,8 @@ class Logger : public Singleton<Logger> {
         if (Level < level_) return;
 
         taskQueue_.emplace([... args = std::forward<Args>(args), line, format, this]() mutable {
-            time_t now = time(0);
-            char* dt = ctime(&now);
-            dt[strlen(dt) - 1] = '\0';  // Remove newline
-
             auto pid = std::this_thread::get_id();
-            auto logLine = fmt::format("[{}][{}][{}][{}:{}]: {}\n", *(int*)&pid, dt,
+            auto logLine = fmt::format("[{}][{}][{}][{}:{}]: {}\n", *(int*)&pid, time(NULL),
                                        levelToString<Level>(), __FILE__, line,
                                        fmt::format(format, std::move(args)...));
 
