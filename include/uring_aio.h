@@ -88,7 +88,7 @@ class UringAIO {
             return;
         }
 
-        if (pending_ >= opts_.queue_depth) {
+        if (pending_ >= opts_.queue_depth / 2) {
             peek_completions();
         }
 
