@@ -4,9 +4,9 @@
 
 TEST(LoggerTest, SQPoll) {
     Logger::GetInst().init();
-    for (int i = 0; i < 65536; i++) {
-        LOG_INFO("SQPoll Test INFO: %d", i);
-        LOG_DEBUG("SQPoll Test DEBUG: %d", i);
-        LOG_ERROR("SQPoll Test ERROR: %d", i);
+    for (int i = 0; i < (1 << 20); i++) {
+        LOG_INFO("SQPoll Test INFO: {}", i);
+        LOG_DEBUG("SQPoll Test DEBUG: {}", i);
+        LOG_ERROR("SQPoll Test ERROR: {}", i);
     }
 }
