@@ -22,12 +22,8 @@ std::string Logger::genDefaultLogFileName() {
     ss << std::put_time(std::localtime(&in_time_t), "%Y%m%d_%H%M%S") << ".txt";
     std::string timestampStr = ss.str();
 
-    // get current executable path
-    std::filesystem::path exePath =
-        std::filesystem::canonical("/proc/self/exe").parent_path();  // Linux
-
     // return the log file path
-    return (exePath / "log" / timestampStr).string();
+    return timestampStr;
 }
 
 void Logger::init(LogLevel level, const std::string& filename) {
