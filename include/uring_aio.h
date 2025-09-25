@@ -11,35 +11,28 @@
 #include <stdexcept>
 #include <vector>
 
+template <bool SQ_POLL, bool FD_FIXED, unsigned int QUEUE_DEPTH = 512>
 class UringAIO {
    public:
-    struct Options {
-        unsigned int queue_depth;
-        bool use_sqpoll;
-        bool require_fixed_files;
-        unsigned int sq_thread_idle_ms;
-    };
-
-    explicit UringAIO(const Options& opt) : opts_(opt) {
+    UringAIO() {
         memset(&params_, 0, sizeof(params_));
-        if (opts_.use_sqpoll) {
+        if constexpr (SQ_POLL) {
             params_.flags |= IORING_SETUP_SQPOLL;
-            params_.sq_thread_idle = opts_.sq_thread_idle_ms;
+            params_.sq_thread_idle = 2000;
         }
 
-        int rc = io_uring_queue_init_params(opts_.queue_depth, &ring_, &params_);
+        int rc = io_uring_queue_init_params(QUEUE_DEPTH, &ring_, &params_);
         if (rc != 0) {
             throw std::runtime_error(std::string("io_uring_queue_init_params failed: ") +
                                      strerror(-rc));
         }
 
-        if (opts_.use_sqpoll) {
+        if constexpr (SQ_POLL && !FD_FIXED) {
             // If we require fixed files, ensure kernel supports SQPOLL with fixed or
             // non-fixed appropriately. IORING_FEAT_SQPOLL_NONFIXED means SQPOLL works
             // with non-fixed files; if not present and we don't register, raw fds in
             // SQPOLL will fail.
-            if (!opts_.require_fixed_files &&
-                !(params_.features & IORING_FEAT_SQPOLL_NONFIXED)) {
+            if (!(params_.features & IORING_FEAT_SQPOLL_NONFIXED)) {
                 io_uring_queue_exit(&ring_);
                 throw std::runtime_error(
                     "SQPOLL requires fixed files on this kernel; set "
@@ -52,45 +45,43 @@ class UringAIO {
 
     // Register a set of fds as fixed files; returns the count registered.
     bool register_fds(const int* fds, int num) {
-        if (num <= 0) return false;
-        int ret = io_uring_register_files(&ring_, fds, num);
-        if (ret < 0) {
-            std::cerr << "error registering files: " << strerror(-ret) << std::endl;
-            return false;
+        if constexpr (FD_FIXED) {
+            if (num <= 0) return false;
+            int ret = io_uring_register_files(&ring_, fds, num);
+            if (ret < 0) {
+                std::cerr << "error registering files: " << strerror(-ret) << std::endl;
+                return false;
+            }
+            registered_files_ = num;
+            return true;
         }
-        registered_files_ = num;
-        return true;
+        return false;
     }
 
     // Unregister registered files (if any).
     void unregister_fds() {
-        if (registered_files_ > 0) {
-            int ret = io_uring_unregister_files(&ring_);
-            if (ret < 0) {
-                std::cerr << "error unregistering files: " << strerror(-ret) << std::endl;
+        if constexpr (FD_FIXED) {
+            if (registered_files_ > 0) {
+                int ret = io_uring_unregister_files(&ring_);
+                if (ret < 0) {
+                    std::cerr << "error unregistering files: " << strerror(-ret)
+                              << std::endl;
+                }
+                registered_files_ = 0;
             }
-            registered_files_ = 0;
         }
     }
 
     // Submit an async write.
-    // If using fixed files, pass fixed_index (>=0) and set use_fixed=true.
-    // If using raw fd, pass fd and set use_fixed=false.
-    void write_async(const char* data, size_t size, off_t offset, int fd_or_index,
-                     bool use_fixed) {
-        if (opts_.require_fixed_files && !use_fixed) [[unlikely]] {
-            std::cerr
-                << "write_async called with raw fd while fixed files are required\n";
-            return;
-        }
-        if (use_fixed && registered_files_ == 0) [[unlikely]] {
-            std::cerr << "No files registered but write_async requested fixed file\n";
-            return;
+    void write_async(const char* data, size_t size, off_t offset, int fd_or_index) {
+        if constexpr (FD_FIXED) {
+            if (registered_files_ == 0) [[unlikely]] {
+                std::cerr << "No files registered but write_async requested fixed file\n";
+                return;
+            }
         }
 
-        if (pending_ >= opts_.queue_depth / 2) {
-            peek_completions();
-        }
+        if (pending_ >= QUEUE_DEPTH / 2) peek_completions();
 
         // Copy buffer so it's alive until completion (could be optimized with
         // user-managed lifetimes).
@@ -108,12 +99,11 @@ class UringAIO {
             }
         }
 
-        auto* req =
-            new WriteRequest{std::move(buf), size, offset, fd_or_index, use_fixed};
+        auto* req = new WriteRequest{std::move(buf), size, offset};
 
         // Prepare initial write
         io_uring_prep_write(sqe, fd_or_index, req->data.get(), size, offset);
-        if (use_fixed) {
+        if constexpr (FD_FIXED) {
             sqe->flags |= IOSQE_FIXED_FILE;
         }
         io_uring_sqe_set_data(sqe, req);
@@ -124,12 +114,13 @@ class UringAIO {
             delete req;
             return;
         }
+
         ++pending_;
     }
 
     // Submit an fsync on the given fd (fixed or raw) and wait for all pending including
     // this fsync.
-    void fsync_and_wait(int fd_or_index, bool use_fixed, bool data_only = false) {
+    void fsync_and_wait(int fd_or_index, bool data_only = false) {
         io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
         if (!sqe) [[unlikely]] {
             // Ensure we at least wait current completions if queue is full
@@ -142,7 +133,7 @@ class UringAIO {
         }
         unsigned flags = data_only ? IORING_FSYNC_DATASYNC : 0;
         io_uring_prep_fsync(sqe, fd_or_index, flags);
-        if (use_fixed) {
+        if constexpr (FD_FIXED) {
             sqe->flags |= IOSQE_FIXED_FILE;
         }
         // No user_data needed for fsync; we track via pending_
@@ -178,8 +169,6 @@ class UringAIO {
         std::unique_ptr<char[]> data;
         size_t size;
         off_t offset;
-        int fd_or_index;
-        bool use_fixed;
     };
 
     // Wait for at least one completion. Returns true if the operation completed
@@ -197,26 +186,19 @@ class UringAIO {
     }
 
     // Wait until all current pending I/Os complete.
-    bool wait_all() {
-        bool all_ok = true;
+    void wait_all() {
         while (pending_ > 0) {
-            if (!wait_for_completion()) [[unlikely]] {
-                all_ok = false;
-            }
+            wait_for_completion();
         }
-        return all_ok;
     }
 
     // Non-blocking harvesting of completions. Returns number processed.
-    size_t peek_completions() {
-        size_t n = 0;
+    void peek_completions() {
         io_uring_cqe* cqe = nullptr;
         while (io_uring_peek_cqe(&ring_, &cqe) == 0) {
             handle_cqe(cqe);
             io_uring_cqe_seen(&ring_, cqe);
-            ++n;
         }
-        return n;
     }
 
     void wait_sq_space_left() {
@@ -229,7 +211,7 @@ class UringAIO {
         // Note: cqe->user_data may be null (e.g., fsync we submitted without data)
         WriteRequest* req = reinterpret_cast<WriteRequest*>(io_uring_cqe_get_data(cqe));
 
-        if (req == nullptr) {
+        if (req == nullptr) [[unlikely]] {
             // e.g., fsync completion
             --pending_;
             return true;
@@ -243,64 +225,20 @@ class UringAIO {
             return false;
         }
 
-        // Handle partial writes by resubmitting the remainder
-        int written = cqe->res;
-        if (static_cast<size_t>(written) < req->size) {
-            size_t remaining = req->size - written;
-            req->offset += written;
-
-            // Shift buffer contents forward: we can just move the pointer into the buffer
-            // by tracking a current pointer offset. Simpler: adjust data by memmove.
-            // Here we allocate new pointer logic: keep same buffer but point to remaining
-            // region. Replace req->data with a view by adjusting base pointer: Since
-            // unique_ptr cannot be pointer-arithmetic adjusted safely, we use a raw
-            // pointer for prep.
-            char* new_base = req->data.get() + written;
-
-            io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
-            if (!sqe) [[unlikely]] {
-                wait_sq_space_left();
-                sqe = io_uring_get_sqe(&ring_);
-                if (!sqe) [[unlikely]] {
-                    std::cerr << "Still no SQE available; dropping partial resubmit\n";
-                    delete req;
-                    --pending_;
-                    return false;
-                }
-            }
-
-            // Prepare remaining write
-            io_uring_prep_write(sqe, req->fd_or_index, new_base, remaining, req->offset);
-            if (req->use_fixed) {
-                sqe->flags |= IOSQE_FIXED_FILE;
-            }
-            io_uring_sqe_set_data(sqe, req);
-
-            int submitted = io_uring_submit(&ring_);
-            if (submitted < 0) [[unlikely]] {
-                std::cerr << "submit (partial) failed: " << strerror(-submitted)
-                          << std::endl;
-                delete req;
-                --pending_;
-                return false;
-            }
-            // pending_ unchanged: we are continuing the same logical write, and we did
-            // not decrement for the prior CQE yet.
-            return true;
-        }
-
         // Full write completed
         delete req;
         --pending_;
         return true;
     }
 
-    Options opts_;
+    static constexpr size_t MAX_BUFF_LEN{1024};
+
     io_uring ring_{};
     io_uring_params params_{};
     size_t pending_{0};
     int registered_files_{0};
     bool closed_{false};
+    char fixed_buff_[QUEUE_DEPTH][1024];
 };
 
 #endif

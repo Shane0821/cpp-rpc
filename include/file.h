@@ -3,7 +3,7 @@
 
 #include "uring_aio.h"
 
-template <bool SQ_POLL, bool SQ_FIXED, unsigned int QUEUE_DEPTH = 64>
+template <bool SQ_POLL, bool FD_FIXED>
 class File {
    public:
     File() = default;
@@ -32,7 +32,7 @@ class File {
             return false;
         }
 
-        if constexpr (SQ_FIXED == true) {
+        if constexpr (FD_FIXED == true) {
             return aio_.register_fds(&fd_, 1);
         } else {
             return true;
@@ -41,10 +41,10 @@ class File {
 
     void write(const char *data, size_t len) {
         if (fd_ != -1) [[likely]] {
-            if constexpr (SQ_FIXED == true) {
-                aio_.write_async(data, len, offset_, 0, true);
+            if constexpr (FD_FIXED == true) {
+                aio_.write_async(data, len, offset_, 0);
             } else {
-                aio_.write_async(data, len, offset_, fd_, true);
+                aio_.write_async(data, len, offset_, fd_);
             }
             offset_ += len;
         }
@@ -52,10 +52,10 @@ class File {
 
     void flush() {
         if (fd_ != -1) {
-            if constexpr (SQ_FIXED == true) {
-                aio_.fsync_and_wait(0, true);
+            if constexpr (FD_FIXED == true) {
+                aio_.fsync_and_wait(0);
             } else {
-                aio_.fsync_and_wait(fd_, false);
+                aio_.fsync_and_wait(fd_);
             }
         }
     }
@@ -73,7 +73,7 @@ class File {
     const std::string &path() const { return path_; }
 
    private:
-    UringAIO aio_{{QUEUE_DEPTH, SQ_POLL, SQ_FIXED, 2000}};
+    UringAIO<SQ_POLL, FD_FIXED> aio_;
     std::string path_;
     int fd_{-1};
     off_t offset_{-1};
