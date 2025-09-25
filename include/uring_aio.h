@@ -231,14 +231,11 @@ class UringAIO {
         return true;
     }
 
-    static constexpr size_t MAX_BUFF_LEN{1024};
-
     io_uring ring_{};
     io_uring_params params_{};
     size_t pending_{0};
     int registered_files_{0};
     bool closed_{false};
-    char fixed_buff_[QUEUE_DEPTH][1024];
 };
 
 #endif
