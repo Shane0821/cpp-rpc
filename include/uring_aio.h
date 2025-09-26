@@ -18,7 +18,7 @@ class UringAIO {
         memset(&params_, 0, sizeof(params_));
         if constexpr (SQ_POLL) {
             params_.flags |= IORING_SETUP_SQPOLL;
-            params_.sq_thread_idle = 2000;
+            params_.sq_thread_idle = 100;
         }
 
         int rc = io_uring_queue_init_params(QUEUE_DEPTH, &ring_, &params_);
@@ -81,7 +81,9 @@ class UringAIO {
             }
         }
 
-        peek_completions();
+        if (pending_ >= COMPLETE_BATCH) {
+            peek_completions();
+        }
 
         // Copy buffer so it's alive until completion (could be optimized with
         // user-managed lifetimes).
