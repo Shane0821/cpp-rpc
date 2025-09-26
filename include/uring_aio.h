@@ -81,7 +81,7 @@ class UringAIO {
             }
         }
 
-        if (pending_ >= QUEUE_DEPTH / 2) peek_completions();
+        peek_completions();
 
         // Copy buffer so it's alive until completion (could be optimized with
         // user-managed lifetimes).
@@ -108,11 +108,13 @@ class UringAIO {
         }
         io_uring_sqe_set_data(sqe, req);
 
-        int ret = io_uring_submit(&ring_);
-        if (ret < 0) [[unlikely]] {
-            std::cerr << "submit failed: " << strerror(-ret) << std::endl;
-            delete req;
-            return;
+        if (pending_ >= SUBMIT_BATCH) {
+            int ret = io_uring_submit(&ring_);
+            if (ret < 0) [[unlikely]] {
+                std::cerr << "submit failed: " << strerror(-ret) << std::endl;
+                delete req;
+                return;
+            }
         }
 
         ++pending_;
@@ -194,10 +196,11 @@ class UringAIO {
 
     // Non-blocking harvesting of completions. Returns number processed.
     void peek_completions() {
-        io_uring_cqe* cqe = nullptr;
-        while (io_uring_peek_cqe(&ring_, &cqe) == 0) {
-            handle_cqe(cqe);
-            io_uring_cqe_seen(&ring_, cqe);
+        static io_uring_cqe* cqes[COMPLETE_BATCH];
+        auto cnt = io_uring_peek_batch_cqe(&ring_, cqes, COMPLETE_BATCH);
+        for (int i = 0; i < cnt; i++) {
+            handle_cqe(cqes[i]);
+            io_uring_cqe_seen(&ring_, cqes[i]);
         }
     }
 
@@ -230,6 +233,9 @@ class UringAIO {
         --pending_;
         return true;
     }
+
+    static constexpr size_t SUBMIT_BATCH{QUEUE_DEPTH / 2};
+    static constexpr size_t COMPLETE_BATCH{24};
 
     io_uring ring_{};
     io_uring_params params_{};
